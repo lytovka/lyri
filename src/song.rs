@@ -17,7 +17,7 @@ pub struct Song {
     header_image_thumbnail_url: String,
     header_image_url: String,
     /// This song's ID
-    id: u32,
+    pub id: u32,
     lyrics_owner_id: u32,
     lyrics_state: String,
     /// url path to lyrics page

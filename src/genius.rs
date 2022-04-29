@@ -6,9 +6,13 @@ const BASE_URL: &str = "https://api.genius.com";
 
 struct GeniusEndpoints<'a> {
     search: &'a str,
+    songs: &'a str,
 }
 
-const ENDPOINTS: GeniusEndpoints<'static> = GeniusEndpoints { search: "search" };
+const ENDPOINTS: GeniusEndpoints<'static> = GeniusEndpoints {
+    search: "search",
+    songs: "songs",
+};
 
 pub struct Genius {
     reqwest: Client,
@@ -22,7 +26,9 @@ impl Genius {
             token,
         }
     }
-
+    /// The search capability covers all content hosted on Genius (all songs).
+    ///
+    /// https://docs.genius.com/#/search-h2
     pub async fn search(&self, q: &str) -> Result<Vec<Hit>, reqwest::Error> {
         let request = self
             .reqwest
@@ -32,7 +38,31 @@ impl Genius {
             .await?;
         let res = request.json::<Response>().await;
         match res {
-            Ok(res) => Ok(res.response.hits.unwrap()),
+            Ok(res) => match res.meta.status {
+                200 => Ok(res.response.hits.unwrap()),
+                _ => panic!("Bad status code: {}", res.meta.status),
+            },
+            Err(e) => panic!("Problem returning the result {:?}", e),
+        }
+    }
+
+    /// A song is a document hosted on Genius. It's usually music lyrics.
+    /// Data for a song includes details about the document itself and information about all the referents that are attached to it, including the text to which they refer.
+    ///
+    /// Reference:  https://docs.genius.com/#songs-h2
+    pub async fn songs(&self, id: u32) -> Result<Song, reqwest::Error> {
+        let request = self
+            .reqwest
+            .get(format!("{}/{}/{}", BASE_URL, ENDPOINTS.songs, id))
+            .bearer_auth(&self.token)
+            .send()
+            .await?;
+        let res = request.json::<Response>().await;
+        match res {
+            Ok(res) => match res.meta.status {
+                200 => Ok(res.response.song.unwrap()),
+                _ => panic!("Bad status code: {}", res.meta.status),
+            },
             Err(e) => panic!("Problem returning the result {:?}", e),
         }
     }
@@ -52,6 +82,7 @@ struct Response {
 #[derive(Deserialize, Debug)]
 struct BlobResponse {
     hits: Option<Vec<Hit>>,
+    song: Option<Song>,
 }
 
 #[derive(Deserialize, Debug)]

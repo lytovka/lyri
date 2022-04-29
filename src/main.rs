@@ -12,7 +12,11 @@ async fn main() {
     );
     let response = genius.search("Ariana%20Grande").await;
     match response {
-        Ok(r) => println!("res main - {:#?}", r),
+        Ok(r) => {
+            let song_id = r.get(0).unwrap().result.id;
+            let song_response = genius.songs(song_id).await;
+            println!("song response - {:#?}", song_response);
+        }
         Err(r) => println!("{}", r),
     }
 }
