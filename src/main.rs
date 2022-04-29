@@ -21,10 +21,12 @@ async fn main() {
     //     Err(r) => println!("{}", r),
     // }
 
-    let response = genius.artists(104344).await;
+    let response = genius.artists(1421).await;
     match response {
         Ok(r) => {
-            println!("artist response - {:#?}", r);
+            // println!("artist response - {:#?}", r);
+            let songs_response = genius.artists_songs(r.id).await;
+            println!("songs vector - {:#?}", songs_response.unwrap());
         }
         Err(r) => println!("{}", r),
     }
