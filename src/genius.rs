@@ -116,49 +116,36 @@ impl Genius {
                 .query(&[("page", page_count), ("per_page", 30)])
                 .bearer_auth(&self.token)
                 .send()
-                .await;
+                .await?;
 
-            match response {
-                Ok(response) => match response.status() {
-                    reqwest::StatusCode::OK => {
-                        match response.json::<Response<ArtistSongsResponse>>().await {
-                            Ok(res) => match res.response.songs {
-                                Some(songs) => {
-                                    if songs.is_empty() {
-                                        break Ok(resulting_vector);
-                                    }
-                                    resulting_vector.extend(songs);
-                                    page_count += 1;
-                                    println!(
-                                        "{}\n{:#?}",
-                                        page_count,
-                                        resulting_vector.last().unwrap()
-                                    );
+            match response.status() {
+                reqwest::StatusCode::OK => {
+                    match response.json::<Response<ArtistSongsResponse>>().await {
+                        Ok(res) => match res.response.songs {
+                            Some(songs) => {
+                                if songs.is_empty() {
+                                    break Ok(resulting_vector);
                                 }
-                                None => {
-                                    if !resulting_vector.is_empty() {
-                                        break Ok(resulting_vector);
-                                    } else {
-                                        panic!("Songs are not returned");
-                                    }
+                                resulting_vector.extend(songs);
+                                page_count += 1;
+                                println!("{}\n{:#?}", page_count, resulting_vector.last().unwrap());
+                            }
+                            None => {
+                                if !resulting_vector.is_empty() {
+                                    break Ok(resulting_vector);
+                                } else {
+                                    panic!("No song has been returned");
                                 }
-                            },
-                            Err(e) => panic!("Unexpected result:\n{:#?}", e),
-                        }
+                            }
+                        },
+                        Err(e) => panic!("Deserialization error :\n{:#?}", e),
                     }
-                    bad_status_code => {
-                        if !resulting_vector.is_empty() {
-                            break Ok(resulting_vector);
-                        } else {
-                            panic!("Bad status code {}", bad_status_code);
-                        }
-                    }
-                },
-                Err(e) => {
+                }
+                bad_status_code => {
                     if !resulting_vector.is_empty() {
                         break Ok(resulting_vector);
                     } else {
-                        panic!("{:#?}", e);
+                        panic!("Bad status code {}", bad_status_code);
                     }
                 }
             }
@@ -186,7 +173,6 @@ struct ArtistResponse {
 #[derive(Deserialize, Debug)]
 struct ArtistSongsResponse {
     songs: Option<Vec<Song>>,
-    next_page: Option<u16>,
 }
 
 #[derive(Deserialize, Debug)]
