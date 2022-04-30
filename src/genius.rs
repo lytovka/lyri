@@ -41,13 +41,13 @@ impl Genius {
             .bearer_auth(&self.token)
             .send()
             .await?;
-        let res = request.json::<Response<SearchResponse>>().await;
-        match res {
-            Ok(res) => match res.meta.status {
-                200 => Ok(res.response.hits.unwrap()),
-                _ => panic!("Bad status code: {}", res.meta.status),
+
+        match request.status() {
+            reqwest::StatusCode::OK => match request.json::<Response<SearchResponse>>().await {
+                Ok(res) => Ok(res.response.hits.unwrap()),
+                Err(e) => panic!("Unexpected result:\n{:#?}", e),
             },
-            Err(e) => panic!("Problem returning the result:\n{:#?}", e),
+            bad_status_code => panic!("Bad status code: {}", bad_status_code),
         }
     }
 
@@ -58,19 +58,19 @@ impl Genius {
     ///
     /// Reference:  https://docs.genius.com/#songs-h2
     pub async fn songs(&self, id: u32) -> Result<Song, reqwest::Error> {
-        let request = self
+        let response = self
             .reqwest
             .get(format!("{}/{}/{}", BASE_URL, ENDPOINTS.songs, id))
             .bearer_auth(&self.token)
             .send()
             .await?;
-        let res = request.json::<Response<SongResponse>>().await;
-        match res {
-            Ok(res) => match res.meta.status {
-                200 => Ok(res.response.song.unwrap()),
-                _ => panic!("Bad status code: {}", res.meta.status),
+
+        match response.status() {
+            reqwest::StatusCode::OK => match response.json::<Response<SongResponse>>().await {
+                Ok(res) => Ok(res.response.song.unwrap()),
+                Err(e) => panic!("Unexpected result:\n{:#?}", e),
             },
-            Err(e) => panic!("Problem returning the result:\n{:#?}", e),
+            bad_status_code => panic!("Bad status code: {}", bad_status_code),
         }
     }
 
@@ -97,9 +97,9 @@ impl Genius {
     }
 
     /// GET `/artists/:id/songs`
-    /// 
+    ///
     /// Documents (songs) for the artist specified. By default, 20 items are returned for each request.
-    /// 
+    ///
     /// https://docs.genius.com/#artists-h2
     pub async fn artists_songs(&self, id: u32) -> Result<Vec<Song>, reqwest::Error> {
         let response = self
@@ -124,13 +124,7 @@ impl Genius {
 }
 
 #[derive(Deserialize, Debug)]
-struct Meta {
-    status: u32,
-}
-
-#[derive(Deserialize, Debug)]
 struct Response<T> {
-    meta: Meta,
     response: T,
 }
 
