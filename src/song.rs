@@ -32,4 +32,12 @@ pub struct Song {
     title_with_featured: String,
     /// Full URL to this song's page on genius.com
     url: String,
+    /// The main artist to which this song is attributed
+    primary_artist: PrimaryArtist,
+}
+
+#[derive(Deserialize, Debug)]
+pub struct PrimaryArtist {
+    pub id: u32,
+    pub name: String,
 }

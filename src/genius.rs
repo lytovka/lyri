@@ -37,7 +37,8 @@ impl Genius {
     pub async fn search(&self, q: &str) -> Result<Vec<Hit>, reqwest::Error> {
         let request = self
             .reqwest
-            .get(format!("{}/{}?q={}", BASE_URL, ENDPOINTS.search, q))
+            .get(format!("{}/{}", BASE_URL, ENDPOINTS.search,))
+            .query(&[("q", q)])
             .bearer_auth(&self.token)
             .send()
             .await?;
@@ -102,23 +103,65 @@ impl Genius {
     ///
     /// https://docs.genius.com/#artists-h2
     pub async fn artists_songs(&self, id: u32) -> Result<Vec<Song>, reqwest::Error> {
-        let response = self
-            .reqwest
-            .get(format!(
-                "{}/{}/{}/{}",
-                BASE_URL, ENDPOINTS.artists, id, ENDPOINTS.songs
-            ))
-            .bearer_auth(&self.token)
-            .send()
-            .await?;
+        let mut page_count: u16 = 1;
+        let mut resulting_vector: Vec<Song> = vec![];
 
-        match response.status() {
-            reqwest::StatusCode::OK => match response.json::<Response<ArtistSongsResponse>>().await
-            {
-                Ok(res) => Ok(res.response.songs.unwrap()),
-                Err(e) => panic!("Unexpected result:\n{:#?}", e),
-            },
-            bad_status_code => panic!("Bad status code: {}", bad_status_code),
+        loop {
+            let response = self
+                .reqwest
+                .get(format!(
+                    "{}/{}/{}/{}",
+                    BASE_URL, ENDPOINTS.artists, id, ENDPOINTS.songs
+                ))
+                .query(&[("page", page_count), ("per_page", 30)])
+                .bearer_auth(&self.token)
+                .send()
+                .await;
+
+            match response {
+                Ok(response) => match response.status() {
+                    reqwest::StatusCode::OK => {
+                        match response.json::<Response<ArtistSongsResponse>>().await {
+                            Ok(res) => match res.response.songs {
+                                Some(songs) => {
+                                    if songs.is_empty() {
+                                        break Ok(resulting_vector);
+                                    }
+                                    resulting_vector.extend(songs);
+                                    page_count += 1;
+                                    println!(
+                                        "{}\n{:#?}",
+                                        page_count,
+                                        resulting_vector.last().unwrap()
+                                    );
+                                }
+                                None => {
+                                    if !resulting_vector.is_empty() {
+                                        break Ok(resulting_vector);
+                                    } else {
+                                        panic!("Songs are not returned");
+                                    }
+                                }
+                            },
+                            Err(e) => panic!("Unexpected result:\n{:#?}", e),
+                        }
+                    }
+                    bad_status_code => {
+                        if !resulting_vector.is_empty() {
+                            break Ok(resulting_vector);
+                        } else {
+                            panic!("Bad status code {}", bad_status_code);
+                        }
+                    }
+                },
+                Err(e) => {
+                    if !resulting_vector.is_empty() {
+                        break Ok(resulting_vector);
+                    } else {
+                        panic!("{:#?}", e);
+                    }
+                }
+            }
         }
     }
 }

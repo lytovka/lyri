@@ -21,7 +21,7 @@ async fn main() {
     //     Err(r) => println!("{}", r),
     // }
 
-    let response = genius.artists(1421).await;
+    let response = genius.artists(16669).await;
     match response {
         Ok(r) => {
             // println!("artist response - {:#?}", r);
