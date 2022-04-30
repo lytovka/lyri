@@ -1,7 +1,7 @@
 use crate::artists::Artist;
 use crate::song::Song;
 use reqwest::Client;
-use serde::Deserialize;
+use serde::{Deserialize, Serialize};
 
 const BASE_URL: &str = "https://api.genius.com";
 
@@ -175,7 +175,7 @@ struct Response<T> {
 struct SearchResponse {
     hits: Option<Vec<Hit>>,
 }
-#[derive(Deserialize, Debug)]
+#[derive(Deserialize, Debug, Serialize)]
 struct SongResponse {
     song: Option<Song>,
 }

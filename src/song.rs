@@ -1,6 +1,6 @@
-use serde::Deserialize;
+use serde::{Deserialize, Serialize};
 
-#[derive(Deserialize, Debug)]
+#[derive(Deserialize, Debug, Serialize)]
 #[allow(dead_code)]
 pub struct Song {
     /// Number of annotations on this song
@@ -36,7 +36,7 @@ pub struct Song {
     primary_artist: PrimaryArtist,
 }
 
-#[derive(Deserialize, Debug)]
+#[derive(Deserialize, Debug, Serialize)]
 pub struct PrimaryArtist {
     pub id: u32,
     pub name: String,
