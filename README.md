@@ -7,9 +7,11 @@ Ultimately my aim is to have a handy abstraction that I plan to utilize for futu
 ## Getting started
 
 1. Get a Genius API client for your application
+
 Please advice API [Client management page](https://genius.com/api-clients) to obtain your keys. You will need to authorize with Genius before it allows to register new application.
 
 2. Update `.env` file
+
 This project uses [`dotenv`](https://crates.io/crates/dotenv) crate to load environment variables from a `.env` file. Upon generating client access token, simply bind its value to `GENIUS_ACCESS_TOKEN`.
 
 3. Run the app
