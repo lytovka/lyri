@@ -128,7 +128,7 @@ impl Genius {
                                 }
                                 resulting_vector.extend(songs);
                                 page_count += 1;
-                                println!("{}\n{:#?}", page_count, resulting_vector.last().unwrap());
+                                println!("Parsing page: {}\n", page_count);
                             }
                             None => {
                                 if !resulting_vector.is_empty() {
@@ -149,6 +149,30 @@ impl Genius {
                     }
                 }
             }
+        }
+    }
+
+    pub async fn lyrics(&self, id: u32) -> Result<Vec<String>, reqwest::Error> {
+        let response = self
+            .reqwest
+            .get(format!("https://lyrics.altart.tk/api/lyrics/{}", id))
+            .bearer_auth(&self.token)
+            .send()
+            .await;
+
+        let response = match response {
+            Ok(response) => response.json::<LyricsResponse>().await,
+            Err(e) => return Err(e),
+        };
+
+        let plain = match response {
+            Ok(res) => res.plain,
+            Err(e) => return Err(e),
+        };
+
+        match plain {
+            Some(text) => Ok(text.split("\n").map(String::from).collect::<Vec<String>>()),
+            None => panic!("blah"),
         }
     }
 }
@@ -180,4 +204,9 @@ pub struct Hit {
     pub index: String,
     pub r#type: String,
     pub result: Song,
+}
+
+#[derive(Deserialize, Debug)]
+struct LyricsResponse {
+    plain: Option<String>,
 }
