@@ -3,20 +3,6 @@ use crate::song::Song;
 use reqwest::Client;
 use serde::{Deserialize, Serialize};
 
-const BASE_URL: &str = "https://api.genius.com";
-
-struct GeniusEndpoints<'a> {
-    search: &'a str,
-    songs: &'a str,
-    artists: &'a str,
-}
-
-const ENDPOINTS: GeniusEndpoints<'static> = GeniusEndpoints {
-    search: "search",
-    songs: "songs",
-    artists: "artists",
-};
-
 pub struct Genius {
     reqwest: Client,
     token: String,
@@ -37,7 +23,7 @@ impl Genius {
     pub async fn search(&self, q: &str) -> Result<Vec<Hit>, reqwest::Error> {
         let request = self
             .reqwest
-            .get(format!("{}/{}", BASE_URL, ENDPOINTS.search,))
+            .get("https://api.genius.com/search")
             .query(&[("q", q)])
             .bearer_auth(&self.token)
             .send()
@@ -61,7 +47,7 @@ impl Genius {
     pub async fn songs(&self, id: u32) -> Result<Song, reqwest::Error> {
         let response = self
             .reqwest
-            .get(format!("{}/{}/{}", BASE_URL, ENDPOINTS.songs, id))
+            .get(format!("https://api.genius.com/songs/{}", id))
             .bearer_auth(&self.token)
             .send()
             .await?;
@@ -83,7 +69,7 @@ impl Genius {
     pub async fn artists(&self, id: u32) -> Result<Artist, reqwest::Error> {
         let response = self
             .reqwest
-            .get(format!("{}/{}/{}", BASE_URL, ENDPOINTS.artists, id))
+            .get(format!("https://api.genius.com/artists/{}", id))
             .bearer_auth(&self.token)
             .send()
             .await?;
@@ -109,10 +95,7 @@ impl Genius {
         loop {
             let response = self
                 .reqwest
-                .get(format!(
-                    "{}/{}/{}/{}",
-                    BASE_URL, ENDPOINTS.artists, id, ENDPOINTS.songs
-                ))
+                .get(format!("https://api.genius.com/artists/{}/songs", id,))
                 .query(&[("page", page_count), ("per_page", 30)])
                 .bearer_auth(&self.token)
                 .send()
