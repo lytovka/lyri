@@ -1,9 +1,6 @@
 use dotenv;
 use std::{fs::File, io::Write};
-pub mod artists;
 pub mod genius;
-pub mod song;
-// use genius_rs::Genius;
 use crate::genius::Genius;
 use tokio;
 

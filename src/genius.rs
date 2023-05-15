@@ -1,16 +1,23 @@
-use crate::artists::Artist;
-use crate::song::Song;
 use reqwest::Client;
-use serde::{Deserialize, Serialize};
+use serde::Deserialize;
+use crate::model::{artist::Artist, song::{Song, SongResponse}, hit::Hit, responses::{SearchResponse, ArtistResponse, ArtistSongsResponse}};
 
-pub struct Genius {
-    reqwest: Client,
-    token: String,
+
+#[derive(Deserialize, Debug)]
+struct Response<T> {
+    response: T,
 }
 
-impl Genius {
+pub struct Genius<'a> {
+    reqwest: Client,
+    token: String,
+    base_url: &'a str,
+}
+
+impl Genius<'_> {
     pub fn new(token: String) -> Self {
         Self {
+            base_url: "https://api.genius.com",
             reqwest: Client::new(),
             token,
         }
@@ -21,9 +28,11 @@ impl Genius {
     ///
     /// Reference: https://docs.genius.com/#/search-h2
     pub async fn search(&self, q: &str) -> Result<Vec<Hit>, reqwest::Error> {
+        let url: String = format!("{}/search", self.base_url);
+
         let request = self
             .reqwest
-            .get("https://api.genius.com/search")
+            .get(url)
             .query(&[("q", q)])
             .bearer_auth(&self.token)
             .send()
@@ -134,62 +143,4 @@ impl Genius {
             }
         }
     }
-
-    pub async fn lyrics(&self, id: u32) -> Result<Vec<String>, reqwest::Error> {
-        let response = self
-            .reqwest
-            .get(format!("https://lyrics.altart.tk/api/lyrics/{}", id))
-            .bearer_auth(&self.token)
-            .send()
-            .await;
-
-        let response = match response {
-            Ok(response) => response.json::<LyricsResponse>().await,
-            Err(e) => return Err(e),
-        };
-
-        let plain = match response {
-            Ok(res) => res.plain,
-            Err(e) => return Err(e),
-        };
-
-        match plain {
-            Some(text) => Ok(text.split("\n").map(String::from).collect::<Vec<String>>()),
-            None => panic!("blah"),
-        }
-    }
-}
-
-#[derive(Deserialize, Debug)]
-struct Response<T> {
-    response: T,
-}
-
-#[derive(Deserialize, Debug)]
-struct SearchResponse {
-    hits: Option<Vec<Hit>>,
-}
-#[derive(Deserialize, Debug, Serialize)]
-struct SongResponse {
-    song: Option<Song>,
-}
-#[derive(Deserialize, Debug)]
-struct ArtistResponse {
-    artist: Option<Artist>,
-}
-#[derive(Deserialize, Debug)]
-struct ArtistSongsResponse {
-    songs: Option<Vec<Song>>,
-}
-
-#[derive(Deserialize, Debug)]
-pub struct Hit {
-    pub index: String,
-    pub r#type: String,
-    pub result: Song,
-}
-
-#[derive(Deserialize, Debug)]
-struct LyricsResponse {
-    plain: Option<String>,
 }
