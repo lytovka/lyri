@@ -1,19 +1,15 @@
 #![allow(dead_code)]
-use std::{fs::File, io::Write};
+mod args;
 mod genius;
 mod model;
-use crate::genius::Genius;
-use clap::Parser;
-use tokio;
-
-/// Simple program to greet a person
-#[derive(Parser, Debug)]
-#[command(author, version, about, long_about = None)]
-struct Args {
-    /// Name of the person to greet
-    #[arg(short, long)]
-    artist: String,
-}
+use {
+    crate::genius::Genius,
+    args::Args,
+    clap::Parser,
+    serde_json::json,
+    std::{fs::File, io::Write},
+    tokio,
+};
 
 #[tokio::main]
 async fn main() {
@@ -44,12 +40,16 @@ async fn main() {
         .artists_songs(artist.id)
         .await
         .expect("unable to generate songs");
-    let serialized_songs = serde_json::to_string(&songs_response).unwrap();
-    let mut file = File::create(format!(
-        "data/{}.json",
-        artist_name.to_lowercase().replace(" ", "_")
-    ))
-    .expect("Unable to create file");
-    file.write_all(serialized_songs.as_bytes())
+
+    let file_path = format!("data/{}.json", artist_name.to_lowercase().replace(" ", "_"));
+
+    let mut file = File::create(file_path).expect("Unable to create file");
+
+    let file_json = json!({
+        "total": songs_response.len(),
+        "songs": songs_response
+    });
+
+    file.write_all(file_json.to_string().as_bytes())
         .expect("could not safe songs to file");
 }

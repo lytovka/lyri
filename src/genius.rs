@@ -1,7 +1,15 @@
-use reqwest::Client;
-use serde::Deserialize;
-use crate::model::{artist::Artist, song::{Song, SongResponse}, hit::Hit, responses::{SearchResponse, ArtistResponse, ArtistSongsResponse}};
+use {
+    crate::model::{
+        artist::Artist,
+        hit::Hit,
+        responses::{ArtistResponse, ArtistSongsResponse, SearchResponse},
+        song::{Song, SongResponse},
+    },
+    reqwest::Client,
+    serde::Deserialize,
+};
 
+const PER_PAGE: u16 = 50;
 
 #[derive(Deserialize, Debug)]
 struct Response<T> {
@@ -17,7 +25,8 @@ pub struct Genius<'a> {
 impl Genius<'_> {
     pub fn new() -> Self {
         Self {
-            auth_token: dotenv::var("GENIUS_ACCESS_TOKEN").expect("Could not find .env var OR the value is wrong"),
+            auth_token: dotenv::var("GENIUS_ACCESS_TOKEN")
+                .expect("Could not find .env var OR the value is wrong"),
             base_url: "https://api.genius.com",
             reqwest: Client::new(),
         }
@@ -97,47 +106,55 @@ impl Genius<'_> {
     /// Documents (songs) for the artist specified. By default, 20 items are returned for each request.
     ///
     /// https://docs.genius.com/#artists-h2
-    pub async fn artists_songs(&self, id: u32) -> Result<Vec<Song>, reqwest::Error> {
-        let mut page_count: u16 = 1;
+    pub async fn artists_songs(&self, artist_id: u32) -> Result<Vec<Song>, reqwest::Error> {
+        let mut page: u16 = 1;
+        let mut total_count: usize = 0;
         let mut resulting_vector: Vec<Song> = vec![];
 
         loop {
             let response = self
                 .reqwest
-                .get(format!("https://api.genius.com/artists/{}/songs", id,))
-                .query(&[("page", page_count), ("per_page", 30)])
+                .get(format!(
+                    "https://api.genius.com/artists/{}/songs",
+                    artist_id
+                ))
+                .query(&[("page", page), ("per_page", PER_PAGE)])
                 .bearer_auth(&self.auth_token)
                 .send()
                 .await?;
+
+            println!("Parsing page: {}\n", page);
 
             match response.status() {
                 reqwest::StatusCode::OK => {
                     match response.json::<Response<ArtistSongsResponse>>().await {
                         Ok(res) => match res.response.songs {
                             Some(songs) => {
-                                if songs.is_empty() {
+                                if songs.is_empty(){
                                     break Ok(resulting_vector);
                                 }
+                                total_count += songs.len();
                                 resulting_vector.extend(songs);
-                                page_count += 1;
-                                println!("Parsing page: {}\n", page_count);
+                                page += 1;
                             }
                             None => {
                                 if !resulting_vector.is_empty() {
+                                    println!("Returning {} songs", total_count);
                                     break Ok(resulting_vector);
                                 } else {
                                     panic!("No song has been returned");
                                 }
                             }
                         },
-                        Err(e) => panic!("Deserialization error :\n{:#?}", e),
+                        Err(e) => panic!("Unexpected result:\n{:#?}", e),
                     }
                 }
                 bad_status_code => {
                     if !resulting_vector.is_empty() {
+                        println!("Returning {} songs", total_count);
                         break Ok(resulting_vector);
                     } else {
-                        panic!("Bad status code {}", bad_status_code);
+                        panic!("Bad status code {:?}", bad_status_code);
                     }
                 }
             }
