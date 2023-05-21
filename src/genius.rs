@@ -10,16 +10,16 @@ struct Response<T> {
 
 pub struct Genius<'a> {
     reqwest: Client,
-    token: String,
+    auth_token: String,
     base_url: &'a str,
 }
 
 impl Genius<'_> {
-    pub fn new(token: String) -> Self {
+    pub fn new() -> Self {
         Self {
+            auth_token: dotenv::var("GENIUS_ACCESS_TOKEN").expect("Could not find .env var OR the value is wrong"),
             base_url: "https://api.genius.com",
             reqwest: Client::new(),
-            token,
         }
     }
     /// GET `/search`
@@ -34,7 +34,7 @@ impl Genius<'_> {
             .reqwest
             .get(url)
             .query(&[("q", q)])
-            .bearer_auth(&self.token)
+            .bearer_auth(&self.auth_token)
             .send()
             .await?;
 
@@ -57,7 +57,7 @@ impl Genius<'_> {
         let response = self
             .reqwest
             .get(format!("https://api.genius.com/songs/{}", id))
-            .bearer_auth(&self.token)
+            .bearer_auth(&self.auth_token)
             .send()
             .await?;
 
@@ -79,7 +79,7 @@ impl Genius<'_> {
         let response = self
             .reqwest
             .get(format!("https://api.genius.com/artists/{}", id))
-            .bearer_auth(&self.token)
+            .bearer_auth(&self.auth_token)
             .send()
             .await?;
 
@@ -106,7 +106,7 @@ impl Genius<'_> {
                 .reqwest
                 .get(format!("https://api.genius.com/artists/{}/songs", id,))
                 .query(&[("page", page_count), ("per_page", 30)])
-                .bearer_auth(&self.token)
+                .bearer_auth(&self.auth_token)
                 .send()
                 .await?;
 
