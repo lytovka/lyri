@@ -6,6 +6,17 @@ pub trait PostProcessor {
     fn process(&self, songs: Vec<ArtistSong>) -> Vec<ArtistSong>;
 }
 
+pub struct UnknownLanguage;
+
+impl PostProcessor for UnknownLanguage {
+    fn process(&self, songs: Vec<ArtistSong>) -> Vec<ArtistSong> {
+        songs
+            .into_iter()
+            .filter(|song| song.language.is_some())
+            .collect()
+    }
+}
+
 pub struct IncompleteLyrics;
 
 impl PostProcessor for IncompleteLyrics {

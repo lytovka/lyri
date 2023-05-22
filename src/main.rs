@@ -8,7 +8,8 @@ use {
     args::Args,
     clap::Parser,
     post_processor::{
-        IncompleteLyrics, PostProcessor, PrimaryArtist, TitleSanitizer, UnknownReleaseDate,
+        IncompleteLyrics, PostProcessor, PrimaryArtist, TitleSanitizer, UnknownLanguage,
+        UnknownReleaseDate,
     },
     serde_json::json,
     std::{fs::File, io::Write},
@@ -42,6 +43,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let mut songs_response = genius.artists_songs(artist.id).await?;
 
     let post_processors: Vec<Box<dyn PostProcessor>> = vec![
+        Box::new(UnknownLanguage),
         Box::new(IncompleteLyrics),
         Box::new(UnknownReleaseDate),
         Box::new(PrimaryArtist {
