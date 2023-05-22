@@ -7,7 +7,9 @@ use {
     crate::genius::Genius,
     args::Args,
     clap::Parser,
-    post_processor::{IncompleteLyrics, PostProcessor, UnknownReleaseDate, UnreleasedSongs},
+    post_processor::{
+        IncompleteLyrics, PostProcessor, PrimaryArtist, TitleSanitizer, UnknownReleaseDate,
+    },
     serde_json::json,
     std::{fs::File, io::Write},
     tokio,
@@ -42,7 +44,10 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let post_processors: Vec<Box<dyn PostProcessor>> = vec![
         Box::new(IncompleteLyrics),
         Box::new(UnknownReleaseDate),
-        Box::new(UnreleasedSongs),
+        Box::new(PrimaryArtist {
+            artist_name: artist_name.clone(),
+        }),
+        Box::new(TitleSanitizer),
     ];
 
     for post_processor in post_processors {

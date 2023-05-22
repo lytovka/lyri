@@ -17,6 +17,21 @@ impl PostProcessor for IncompleteLyrics {
     }
 }
 
+pub struct PrimaryArtist {
+    pub artist_name: String,
+}
+
+impl PostProcessor for PrimaryArtist {
+    fn process(&self, songs: Vec<ArtistSong>) -> Vec<ArtistSong> {
+        songs
+            .into_iter()
+            .filter(|song| {
+                song.primary_artist.name.to_lowercase() == self.artist_name.to_lowercase()
+            })
+            .collect()
+    }
+}
+
 pub struct UnknownReleaseDate;
 
 impl PostProcessor for UnknownReleaseDate {
@@ -28,11 +43,11 @@ impl PostProcessor for UnknownReleaseDate {
     }
 }
 
-pub struct UnreleasedSongs;
+pub struct TitleSanitizer;
 
-impl PostProcessor for UnreleasedSongs {
+impl PostProcessor for TitleSanitizer {
     fn process(&self, songs: Vec<ArtistSong>) -> Vec<ArtistSong> {
-        let re = Regex::new(r"(?i)unreleased").unwrap();
+        let re = Regex::new(r"(?i)unreleased|remix|(instrumental)").unwrap();
         songs
             .into_iter()
             .filter(|song| !re.is_match(&song.title.to_lowercase()))
