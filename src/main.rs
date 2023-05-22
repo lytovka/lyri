@@ -12,34 +12,30 @@ use {
 };
 
 #[tokio::main]
-async fn main() {
+async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let args = Args::parse();
 
     let genius = Genius::new();
 
-    let hits = genius
-        .search(&args.artist)
-        .await
-        .unwrap_or_else(|_| panic!("Could not find any hits of this artist."));
+    let hits = genius.search(&args.artist).await?;
+
     let matched_hit = hits
         .iter()
-        .find(|hit| hit.result.primary_artist.name.to_lowercase() == args.artist.to_lowercase())
-        .unwrap_or_else(|| panic!("Could not find an artist by `--name` argument."));
+        .find(|&hit| hit.result.primary_artist.name.to_lowercase() == args.artist.to_lowercase());
+
+    let matched_hit = match matched_hit {
+        Some(hit) => hit,
+        None => panic!("Could not find any artist by `{}`", args.artist),
+    };
 
     let (artist_id, artist_name) = (
         matched_hit.result.primary_artist.id,
         matched_hit.result.primary_artist.name.clone(),
     );
 
-    let artist = genius
-        .artists(artist_id)
-        .await
-        .unwrap_or_else(|_| panic!("Could not find any artist by this id."));
+    let artist = genius.artists(artist_id).await?;
 
-    let songs_response = genius
-        .artists_songs(artist.id)
-        .await
-        .expect("unable to generate songs");
+    let songs_response = genius.artists_songs(artist.id).await?;
 
     let file_path = format!("data/{}.json", artist_name.to_lowercase().replace(" ", "_"));
 
@@ -52,4 +48,6 @@ async fn main() {
 
     file.write_all(file_json.to_string().as_bytes())
         .expect("could not safe songs to file");
+
+    Ok(())
 }
