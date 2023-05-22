@@ -2,10 +2,14 @@
 mod args;
 mod genius;
 mod model;
+mod post_processor;
 use {
     crate::genius::Genius,
     args::Args,
     clap::Parser,
+    post_processor::{
+        IncompleteLyrics, PostProcessor, PrimaryArtist, TitleSanitizer, UnknownReleaseDate,
+    },
     serde_json::json,
     std::{fs::File, io::Write},
     tokio,
@@ -35,17 +39,28 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     let artist = genius.artists(artist_id).await?;
 
-    let songs_response = genius.artists_songs(artist.id).await?;
+    let mut songs_response = genius.artists_songs(artist.id).await?;
 
-    let file_path = format!("data/{}.json", artist_name.to_lowercase().replace(" ", "_"));
+    let post_processors: Vec<Box<dyn PostProcessor>> = vec![
+        Box::new(IncompleteLyrics),
+        Box::new(UnknownReleaseDate),
+        Box::new(PrimaryArtist {
+            artist_name: artist_name.clone(),
+        }),
+        Box::new(TitleSanitizer),
+    ];
 
-    let mut file = File::create(file_path).expect("Unable to create file");
+    for post_processor in post_processors {
+        songs_response = post_processor.process(songs_response);
+    }
 
     let file_json = json!({
         "total": songs_response.len(),
         "songs": songs_response
     });
 
+    let file_path = format!("data/{}.json", artist_name.to_lowercase().replace(" ", "_"));
+    let mut file = File::create(file_path).expect("Unable to create file");
     file.write_all(file_json.to_string().as_bytes())
         .expect("could not safe songs to file");
 

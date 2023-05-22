@@ -1,6 +1,6 @@
 use serde::Deserialize;
 
-use super::{artist::Artist, hit::Hit, song::Song};
+use super::{artist::Artist, hit::Hit, song::ArtistSong};
 
 #[derive(Deserialize, Debug)]
 pub struct SearchResponse {
@@ -13,7 +13,7 @@ pub struct ArtistResponse {
 }
 #[derive(Deserialize, Debug)]
 pub struct ArtistSongsResponse {
-    pub songs: Option<Vec<Song>>,
+    pub songs: Option<Vec<ArtistSong>>,
 }
 
 #[derive(Deserialize, Debug)]
