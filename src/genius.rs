@@ -3,7 +3,7 @@ use {
         artist::Artist,
         hit::Hit,
         responses::{ArtistResponse, ArtistSongsResponse, SearchResponse},
-        song::{Song, SongResponse},
+        song::{ArtistSong, SongResponse},
     },
     reqwest::Client,
     serde::Deserialize,
@@ -62,7 +62,7 @@ impl Genius<'_> {
     /// Data for a song includes details about the document itself and information about all the referents that are attached to it, including the text to which they refer.
     ///
     /// Reference:  https://docs.genius.com/#songs-h2
-    pub async fn songs(&self, id: u32) -> Result<Song, reqwest::Error> {
+    pub async fn songs(&self, id: u32) -> Result<ArtistSong, reqwest::Error> {
         let response = self
             .reqwest
             .get(format!("https://api.genius.com/songs/{}", id))
@@ -106,10 +106,10 @@ impl Genius<'_> {
     /// Documents (songs) for the artist specified. By default, 20 items are returned for each request.
     ///
     /// https://docs.genius.com/#artists-h2
-    pub async fn artists_songs(&self, artist_id: u32) -> Result<Vec<Song>, reqwest::Error> {
+    pub async fn artists_songs(&self, artist_id: u32) -> Result<Vec<ArtistSong>, reqwest::Error> {
         let mut page: u16 = 1;
         let mut total_count: usize = 0;
-        let mut resulting_vector: Vec<Song> = vec![];
+        let mut resulting_vector: Vec<ArtistSong> = vec![];
 
         loop {
             let response = self
@@ -130,7 +130,7 @@ impl Genius<'_> {
                     match response.json::<Response<ArtistSongsResponse>>().await {
                         Ok(res) => match res.response.songs {
                             Some(songs) => {
-                                if songs.is_empty(){
+                                if songs.is_empty() {
                                     break Ok(resulting_vector);
                                 }
                                 total_count += songs.len();
