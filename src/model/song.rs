@@ -2,7 +2,7 @@ use serde::{Deserialize, Serialize};
 
 use super::artist::PrimaryArtist;
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct ArtistSong {
     pub annotation_count: Option<u32>,
     pub api_path: String,
@@ -26,7 +26,22 @@ pub struct ArtistSong {
     pub url: String,
 }
 
-#[derive(Deserialize, Debug, Serialize)]
+impl ArtistSong {
+    pub fn to_artist_song_with_lyrics(&self, lyrics: String) -> ArtistSongWithLyrics {
+        ArtistSongWithLyrics {
+            song: self.clone(),
+            lyrics,
+        }
+    }
+}
+
+#[derive(Deserialize, Debug, Serialize, Clone)]
+pub struct ArtistSongWithLyrics {
+    pub song: ArtistSong,
+    pub lyrics: String,
+}
+
+#[derive(Deserialize, Debug, Serialize, Clone)]
 pub struct SongResponse {
     pub song: Option<ArtistSong>,
 }

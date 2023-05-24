@@ -1,10 +1,15 @@
 #![allow(dead_code)]
+
+use model::song::{ArtistSong, ArtistSongWithLyrics};
+use serde::{Deserialize, Serialize};
 mod args;
 mod genius;
 mod model;
 mod post_processor;
+mod scraper;
 use {
     crate::genius::Genius,
+    crate::scraper::AppScraper,
     args::Args,
     clap::Parser,
     post_processor::{
@@ -12,9 +17,38 @@ use {
         UnknownReleaseDate,
     },
     serde_json::json,
-    std::{fs::File, io::Write},
+    std::{
+        fs::File,
+        io::{BufReader, Write},
+    },
     tokio,
 };
+
+#[derive(Deserialize, Debug)]
+struct FileData {
+    total: usize,
+    songs: Vec<ArtistSong>,
+}
+
+impl FileData {
+    fn to_file_data_with_lyrics(&self, lyrics: Vec<String>) -> FileDataWithLyrics {
+        FileDataWithLyrics {
+            total: self.total,
+            songs: self
+                .songs
+                .iter()
+                .zip(lyrics)
+                .map(|(song, lyrics)| song.to_artist_song_with_lyrics(lyrics))
+                .collect(),
+        }
+    }
+}
+
+#[derive(Serialize, Debug)]
+struct FileDataWithLyrics {
+    total: usize,
+    songs: Vec<ArtistSongWithLyrics>,
+}
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
@@ -62,8 +96,36 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     });
 
     let file_path = format!("data/{}.json", artist_name.to_lowercase().replace(" ", "_"));
-    let mut file = File::create(file_path).expect("Unable to create file");
+
+    let mut file = File::create(&file_path).expect("Unable to create file");
     file.write_all(file_json.to_string().as_bytes())
+        .expect("could not safe songs to file");
+
+    let file = File::open(file_path)?;
+    let reader = BufReader::new(&file);
+    let res_file: FileData = serde_json::from_reader(reader).unwrap();
+
+    let scraper = AppScraper::new();
+
+    let mut lyric_vec: Vec<String> = Vec::new();
+
+    for song in &res_file.songs {
+        let lyrics = scraper.from_url(&song.url).await?;
+        lyric_vec.push(lyrics);
+    }
+
+    let file_data_with_lyrics = res_file.to_file_data_with_lyrics(lyric_vec);
+
+    let file_json = json!({
+        "total": res_file.songs.len(),
+        "songs": file_data_with_lyrics
+    });
+
+    let mut file_with_lyrics: File =
+        File::create("data/tinariwen_with_lyrics.json").expect("Unable to create file");
+
+    file_with_lyrics
+        .write_all(file_json.to_string().as_bytes())
         .expect("could not safe songs to file");
 
     Ok(())
