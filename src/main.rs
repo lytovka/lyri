@@ -1,6 +1,10 @@
 #![allow(dead_code)]
 
+use file_manager::{FileManager, SongsFileManager};
+use model::song::ArtistSong;
+
 mod args;
+mod file_manager;
 mod genius;
 mod model;
 mod post_processor;
@@ -10,16 +14,12 @@ use {
     crate::scraper::AppScraper,
     args::Args,
     clap::Parser,
-    model::{artist::PrimaryArtist, files::FileData, hit::Hit},
+    model::{artist::PrimaryArtist, hit::Hit},
     post_processor::{
         IncompleteLyrics, MainArtist, PostProcessor, TitleSanitizer, UnknownLanguage,
         UnknownReleaseDate,
     },
     serde_json::json,
-    std::{
-        fs::File,
-        io::{BufReader, Write},
-    },
     tokio,
 };
 
@@ -36,6 +36,22 @@ fn find_arg_artist_from_hits(arg_artist: &str, genius_hits: Vec<Hit>) -> (u32, S
     (id, name)
 }
 
+fn process_artist_songs(artist_id: u32, mut artist_songs: Vec<ArtistSong>) -> Vec<ArtistSong> {
+    let post_processors: Vec<Box<dyn PostProcessor>> = vec![
+        Box::new(UnknownLanguage),
+        Box::new(IncompleteLyrics),
+        Box::new(UnknownReleaseDate),
+        Box::new(MainArtist { artist_id }),
+        Box::new(TitleSanitizer),
+    ];
+
+    for post_processor in post_processors {
+        artist_songs = post_processor.process(artist_songs);
+    }
+
+    artist_songs
+}
+
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let args = Args::parse();
@@ -48,40 +64,24 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     let artist = genius.artists(artist_id).await?;
 
-    let mut songs_response = genius.artists_songs(artist.id).await?;
+    let songs_response = genius.artists_songs(artist.id).await?;
 
-    let post_processors: Vec<Box<dyn PostProcessor>> = vec![
-        Box::new(UnknownLanguage),
-        Box::new(IncompleteLyrics),
-        Box::new(UnknownReleaseDate),
-        Box::new(MainArtist {
-            artist_name: artist_name.clone(),
-        }),
-        Box::new(TitleSanitizer),
-    ];
-
-    for post_processor in post_processors {
-        songs_response = post_processor.process(songs_response);
-    }
+    let processed_songs = process_artist_songs(artist_id, songs_response);
 
     let file_json = json!({
-        "total": songs_response.len(),
-        "songs": songs_response
+        "total": processed_songs.len(),
+        "songs": processed_songs
     });
 
     let file_path = format!("data/{}.json", artist_name.to_lowercase().replace(" ", "_"));
 
-    let mut file = File::create(&file_path).expect("Unable to create file");
-    file.write_all(file_json.to_string().as_bytes())
-        .expect("could not safe songs to file");
+    SongsFileManager::write(file_path.as_str(), file_json.to_string());
 
-    let file = File::open(file_path)?;
-    let reader = BufReader::new(&file);
-    let res_file: FileData = serde_json::from_reader(reader).unwrap();
+    let res_file = SongsFileManager::read(file_path.as_str());
 
     let scraper = AppScraper::new();
 
-    let mut lyric_vec: Vec<String> = Vec::new();
+    let mut lyric_vec: Vec<String> = vec![];
 
     for song in &res_file.songs {
         let lyrics = scraper.from_url(&song.url).await?;
@@ -91,16 +91,15 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let file_data_with_lyrics = res_file.to_file_data_with_lyrics(lyric_vec);
 
     let file_json = json!({
-        "total": res_file.songs.len(),
+        "total": file_data_with_lyrics.songs.len(),
         "songs": file_data_with_lyrics
     });
 
-    let mut file_with_lyrics: File =
-        File::create("data/tinariwen_with_lyrics.json").expect("Unable to create file");
-
-    file_with_lyrics
-        .write_all(file_json.to_string().as_bytes())
-        .expect("could not safe songs to file");
+    let file_path = format!(
+        "data/{}_with_lyrics.json",
+        artist_name.to_lowercase().replace(" ", "_")
+    );
+    SongsFileManager::write(file_path.as_str(), file_json.to_string());
 
     Ok(())
 }

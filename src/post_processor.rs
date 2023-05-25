@@ -29,16 +29,14 @@ impl PostProcessor for IncompleteLyrics {
 }
 
 pub struct MainArtist {
-    pub artist_name: String,
+    pub artist_id: u32,
 }
 
 impl PostProcessor for MainArtist {
     fn process(&self, songs: Vec<ArtistSong>) -> Vec<ArtistSong> {
         songs
             .into_iter()
-            .filter(|song| {
-                song.primary_artist.name.to_lowercase() == self.artist_name.to_lowercase()
-            })
+            .filter(|song| song.primary_artist.id == self.artist_id)
             .collect()
     }
 }
