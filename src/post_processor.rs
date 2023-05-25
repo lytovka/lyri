@@ -28,11 +28,11 @@ impl PostProcessor for IncompleteLyrics {
     }
 }
 
-pub struct PrimaryArtist {
+pub struct MainArtist {
     pub artist_name: String,
 }
 
-impl PostProcessor for PrimaryArtist {
+impl PostProcessor for MainArtist {
     fn process(&self, songs: Vec<ArtistSong>) -> Vec<ArtistSong> {
         songs
             .into_iter()

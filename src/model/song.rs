@@ -40,8 +40,3 @@ pub struct ArtistSongWithLyrics {
     pub song: ArtistSong,
     pub lyrics: String,
 }
-
-#[derive(Deserialize, Debug, Serialize, Clone)]
-pub struct SongResponse {
-    pub song: Option<ArtistSong>,
-}

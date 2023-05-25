@@ -1,7 +1,5 @@
 #![allow(dead_code)]
 
-use model::song::{ArtistSong, ArtistSongWithLyrics};
-use serde::{Deserialize, Serialize};
 mod args;
 mod genius;
 mod model;
@@ -12,8 +10,9 @@ use {
     crate::scraper::AppScraper,
     args::Args,
     clap::Parser,
+    model::{artist::PrimaryArtist, files::FileData, hit::Hit},
     post_processor::{
-        IncompleteLyrics, PostProcessor, PrimaryArtist, TitleSanitizer, UnknownLanguage,
+        IncompleteLyrics, MainArtist, PostProcessor, TitleSanitizer, UnknownLanguage,
         UnknownReleaseDate,
     },
     serde_json::json,
@@ -24,30 +23,17 @@ use {
     tokio,
 };
 
-#[derive(Deserialize, Debug)]
-struct FileData {
-    total: usize,
-    songs: Vec<ArtistSong>,
-}
+fn find_arg_artist_from_hits(arg_artist: &str, genius_hits: Vec<Hit>) -> (u32, String) {
+    let matched_hit = genius_hits
+        .iter()
+        .find(|&hit| hit.result.primary_artist.name.to_lowercase() == arg_artist.to_lowercase());
 
-impl FileData {
-    fn to_file_data_with_lyrics(&self, lyrics: Vec<String>) -> FileDataWithLyrics {
-        FileDataWithLyrics {
-            total: self.total,
-            songs: self
-                .songs
-                .iter()
-                .zip(lyrics)
-                .map(|(song, lyrics)| song.to_artist_song_with_lyrics(lyrics))
-                .collect(),
-        }
-    }
-}
+    let PrimaryArtist { id, name } = match matched_hit {
+        Some(hit) => hit.result.primary_artist.clone(),
+        None => panic!("Could not find artist `{}` in Genius hits.", arg_artist),
+    };
 
-#[derive(Serialize, Debug)]
-struct FileDataWithLyrics {
-    total: usize,
-    songs: Vec<ArtistSongWithLyrics>,
+    (id, name)
 }
 
 #[tokio::main]
@@ -58,19 +44,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     let hits = genius.search(&args.artist).await?;
 
-    let matched_hit = hits
-        .iter()
-        .find(|&hit| hit.result.primary_artist.name.to_lowercase() == args.artist.to_lowercase());
-
-    let matched_hit = match matched_hit {
-        Some(hit) => hit,
-        None => panic!("Could not find any artist by `{}`", args.artist),
-    };
-
-    let (artist_id, artist_name) = (
-        matched_hit.result.primary_artist.id,
-        matched_hit.result.primary_artist.name.clone(),
-    );
+    let (artist_id, artist_name) = find_arg_artist_from_hits(&args.artist, hits);
 
     let artist = genius.artists(artist_id).await?;
 
@@ -80,7 +54,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         Box::new(UnknownLanguage),
         Box::new(IncompleteLyrics),
         Box::new(UnknownReleaseDate),
-        Box::new(PrimaryArtist {
+        Box::new(MainArtist {
             artist_name: artist_name.clone(),
         }),
         Box::new(TitleSanitizer),
