@@ -18,7 +18,7 @@ pub struct Artist {
     pub url: String,
 }
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct PrimaryArtist {
     pub id: u32,
     pub name: String,

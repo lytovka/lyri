@@ -2,8 +2,8 @@ use {
     crate::model::{
         artist::Artist,
         hit::Hit,
-        responses::{ArtistResponse, ArtistSongsResponse, SearchResponse},
-        song::{ArtistSong, SongResponse},
+        responses::{ArtistResponse, ArtistSongsResponse, SearchResponse, SongResponse},
+        song::ArtistSong,
     },
     reqwest::Client,
     serde::Deserialize,
@@ -31,10 +31,7 @@ impl Genius<'_> {
             reqwest: Client::new(),
         }
     }
-    /// GET `/search`
-    ///  
-    /// The search capability covers all content hosted on Genius (all songs).
-    ///
+
     /// Reference: https://docs.genius.com/#/search-h2
     pub async fn search(&self, q: &str) -> Result<Vec<Hit>, reqwest::Error> {
         let url: String = format!("{}/search", self.base_url);
@@ -56,11 +53,6 @@ impl Genius<'_> {
         }
     }
 
-    /// GET `/songs/:id`
-    ///
-    /// A song is a document hosted on Genius. It's usually music lyrics.
-    /// Data for a song includes details about the document itself and information about all the referents that are attached to it, including the text to which they refer.
-    ///
     /// Reference:  https://docs.genius.com/#songs-h2
     pub async fn songs(&self, id: u32) -> Result<ArtistSong, reqwest::Error> {
         let response = self
@@ -79,10 +71,6 @@ impl Genius<'_> {
         }
     }
 
-    /// GET `/artists/:id`
-    ///
-    /// Data for a specific artist.
-    ///
     /// https://docs.genius.com/#artists-h2
     pub async fn artists(&self, id: u32) -> Result<Artist, reqwest::Error> {
         let response = self
@@ -101,10 +89,6 @@ impl Genius<'_> {
         }
     }
 
-    /// GET `/artists/:id/songs`
-    ///
-    /// Documents (songs) for the artist specified. By default, 20 items are returned for each request.
-    ///
     /// https://docs.genius.com/#artists-h2
     pub async fn artists_songs(&self, artist_id: u32) -> Result<Vec<ArtistSong>, reqwest::Error> {
         let mut page: u16 = 1;

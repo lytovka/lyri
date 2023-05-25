@@ -1,4 +1,4 @@
-use serde::Deserialize;
+use serde::{Deserialize, Serialize};
 
 use super::{artist::Artist, hit::Hit, song::ArtistSong};
 
@@ -19,4 +19,9 @@ pub struct ArtistSongsResponse {
 #[derive(Deserialize, Debug)]
 pub struct LyricsResponse {
     pub plain: Option<String>,
+}
+
+#[derive(Deserialize, Debug, Serialize, Clone)]
+pub struct SongResponse {
+    pub song: Option<ArtistSong>,
 }
