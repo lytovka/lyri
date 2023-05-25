@@ -1,22 +1,23 @@
 # Introduction
 
-This repository holds an implementation of [Genius API](https://docs.genius.com/#/getting-started-h1) wrapper.
+This repository holds an implementation of [Genius API](https://docs.genius.com/#/getting-started-h1) wrapper in Rust, along with a lyrics scraper for Genius pages.
 
-Ultimately my aim is to have a handy abstraction that I plan to utilize for future data processing projects. For the time being, this implementation should not be considered as something of an exceptional value: this is just me learning Rust fundamentals by building something with it.
+The purpose of this implementation is to create a convenient abstraction for interacting with the Genius API and scraping lyrics from Genius pages. This can be useful for various data processing projects. Please note that the implementation of the lyrics scraper is for educational purposes and should be used responsibly and in compliance with Genius's terms of service.
 
 ## Getting started
+To get started with this wrapper and lyrics scraper, follow the steps below:
 
-1. Get a Genius API client for your application
+1. Obtain a Genius API client for your application
 
-Please advice API [Client management page](https://genius.com/api-clients) to obtain your keys. You will need to authorize with Genius before it allows to register new application.
+Please visit the [API Client management](https://genius.com/api-clients) page to obtain your API keys. You will need to authorize with Genius before you can register a new application.
 
 2. Update `.env` file
 
-This project uses [`dotenv`](https://crates.io/crates/dotenv) crate to load environment variables from a `.env` file. Upon generating client access token, simply bind its value to `GENIUS_ACCESS_TOKEN`.
+This project utilizes the [`dotenv`](https://crates.io/crates/dotenv) crate to load environment variables from a `.env` file. Once you have generated a client access token, bind its value to the `GENIUS_ACCESS_TOKEN` variable in the `.env` file.
 
-3. Run the app
+3. Build and run the application
 
 ```bash
 cargo build
-cargo run
+cargo run -- --artist "oasis" # or any other artist
 ```
