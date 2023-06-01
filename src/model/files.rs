@@ -1,3 +1,5 @@
+use std::collections::HashMap;
+
 use serde::{Deserialize, Serialize};
 
 use super::song::{ArtistSong, ArtistSongWithLyrics};
@@ -9,14 +11,16 @@ pub struct FileData {
 }
 
 impl FileData {
-    pub fn to_file_data_with_lyrics(&self, lyrics: Vec<String>) -> FileDataWithLyrics {
+    pub fn to_file_data_with_lyrics(&self, lyrics: HashMap<u32, String>) -> FileDataWithLyrics {
         FileDataWithLyrics {
             total: self.total,
             songs: self
                 .songs
                 .iter()
-                .zip(lyrics)
-                .map(|(song, lyrics)| song.to_artist_song_with_lyrics(lyrics))
+                .map(|song| match lyrics.get(&song.id) {
+                    Some(lyrics) => song.to_artist_song_with_lyrics(lyrics.to_owned()),
+                    None => song.to_artist_song_with_lyrics(String::from("")),
+                })
                 .collect(),
         }
     }
