@@ -5,13 +5,12 @@ use genius::{
     genius::Genius,
     model::{artist::PrimaryArtist, hit::Hit, song::ArtistSong},
 };
+use scraper::scraper::AppScraper;
 
 mod args;
 mod file_manager;
 mod post_processor;
-mod scraper;
 use {
-    crate::scraper::AppScraper,
     args::Args,
     clap::Parser,
     post_processor::{
