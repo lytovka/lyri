@@ -1,4 +1,6 @@
-#![allow(dead_code)]
+mod args;
+mod file_manager;
+mod post_processor;
 
 use file_manager::{FileManager, SongsFileManager};
 use genius::{
@@ -6,10 +8,6 @@ use genius::{
     model::{artist::PrimaryArtist, hit::Hit, song::ArtistSong},
 };
 use scraper::scraper::AppScraper;
-
-mod args;
-mod file_manager;
-mod post_processor;
 use {
     args::Args,
     clap::Parser,
