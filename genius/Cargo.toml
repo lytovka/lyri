@@ -1,17 +1,13 @@
 [package]
-name = "lyri"
+name = "genius"
 version = "0.1.0"
 edition = "2021"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-genius = {path = "./genius"}
-clap = { version = "4.3.0", features = ["derive"] }
-dotenv = "0.15.0"
-once_cell = "1.17.1"
-regex = "1.8.1"
 reqwest = { version = "0.11.10", features = ["json"] }
+dotenv = "0.15.0"
 scraper = "0.16.0"
 serde = { version = "1.0.136", features = ["derive"] }
 serde_json = "1.0.79"

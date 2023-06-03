@@ -1,20 +1,19 @@
 #![allow(dead_code)]
 
 use file_manager::{FileManager, SongsFileManager};
-use model::song::ArtistSong;
+use genius::{
+    genius::Genius,
+    model::{artist::PrimaryArtist, hit::Hit, song::ArtistSong},
+};
 
 mod args;
 mod file_manager;
-mod genius;
-mod model;
 mod post_processor;
 mod scraper;
 use {
-    crate::genius::Genius,
     crate::scraper::AppScraper,
     args::Args,
     clap::Parser,
-    model::{artist::PrimaryArtist, hit::Hit},
     post_processor::{
         IncompleteLyrics, MainArtist, PostProcessor, TitleSanitizer, UnknownLanguage,
         UnknownReleaseDate,

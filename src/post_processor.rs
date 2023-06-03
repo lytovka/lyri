@@ -1,6 +1,5 @@
+use genius::model::song::ArtistSong;
 use regex::Regex;
-
-use crate::model::song::ArtistSong;
 
 pub trait PostProcessor {
     fn process(&self, songs: Vec<ArtistSong>) -> Vec<ArtistSong>;
