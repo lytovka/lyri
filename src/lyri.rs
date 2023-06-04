@@ -1,8 +1,24 @@
 use files::file_manager::{FileManager, SongsFileManager};
-use genius::genius::Genius;
+use genius::{
+    genius::Genius,
+    model::{artist::PrimaryArtist, hit::Hit},
+};
+use processing::filters;
 use scraper::scraper::AppScraper;
 
-use crate::{find_arg_artist_from_hits, post_processor::process_artist_songs};
+fn find_arg_artist_from_hits(arg_artist: &str, genius_hits: Vec<Hit>) -> (u32, String) {
+    let matched_hit = genius_hits
+        .iter()
+        .find(|&hit| hit.result.primary_artist.name.to_lowercase() == arg_artist.to_lowercase());
+
+    let PrimaryArtist { id, name } = match matched_hit {
+        Some(hit) => hit.result.primary_artist.clone(),
+        None => panic!("Could not find artist `{}` in Genius hits.", arg_artist),
+    };
+
+    (id, name)
+}
+
 use {crate::args::Args, serde_json::json};
 
 pub async fn lyri(args: Args) -> Result<(), Box<dyn std::error::Error>> {
@@ -16,7 +32,7 @@ pub async fn lyri(args: Args) -> Result<(), Box<dyn std::error::Error>> {
 
     let songs_response = genius.artists_songs(artist.id).await?;
 
-    let processed_songs = process_artist_songs(artist_id, songs_response);
+    let processed_songs = filters::artist_songs(artist_id, songs_response);
 
     let file_json = json!({
         "total": processed_songs.len(),

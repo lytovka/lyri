@@ -63,8 +63,8 @@ impl PostProcessor for TitleSanitizer {
     }
 }
 
-pub fn process_artist_songs(artist_id: u32, mut artist_songs: Vec<ArtistSong>) -> Vec<ArtistSong> {
-    let post_processors: Vec<Box<dyn PostProcessor>> = vec![
+pub fn artist_songs(artist_id: u32, mut artist_songs: Vec<ArtistSong>) -> Vec<ArtistSong> {
+    let filters: Vec<Box<dyn PostProcessor>> = vec![
         Box::new(UnknownLanguage),
         Box::new(IncompleteLyrics),
         Box::new(UnknownReleaseDate),
@@ -72,9 +72,11 @@ pub fn process_artist_songs(artist_id: u32, mut artist_songs: Vec<ArtistSong>) -
         Box::new(TitleSanitizer),
     ];
 
-    for post_processor in post_processors {
-        artist_songs = post_processor.process(artist_songs);
-    }
+    artist_songs = filters
+        .into_iter()
+        .fold(artist_songs, |songs, post_processor| {
+            post_processor.process(songs)
+        });
 
     artist_songs
 }
