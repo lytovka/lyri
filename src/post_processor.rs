@@ -1,11 +1,11 @@
 use genius::model::song::ArtistSong;
 use regex::Regex;
 
-pub trait PostProcessor {
+trait PostProcessor {
     fn process(&self, songs: Vec<ArtistSong>) -> Vec<ArtistSong>;
 }
 
-pub struct UnknownLanguage;
+struct UnknownLanguage;
 
 impl PostProcessor for UnknownLanguage {
     fn process(&self, songs: Vec<ArtistSong>) -> Vec<ArtistSong> {
@@ -16,7 +16,7 @@ impl PostProcessor for UnknownLanguage {
     }
 }
 
-pub struct IncompleteLyrics;
+struct IncompleteLyrics;
 
 impl PostProcessor for IncompleteLyrics {
     fn process(&self, songs: Vec<ArtistSong>) -> Vec<ArtistSong> {
@@ -27,7 +27,7 @@ impl PostProcessor for IncompleteLyrics {
     }
 }
 
-pub struct MainArtist {
+struct MainArtist {
     pub artist_id: u32,
 }
 
@@ -40,7 +40,7 @@ impl PostProcessor for MainArtist {
     }
 }
 
-pub struct UnknownReleaseDate;
+struct UnknownReleaseDate;
 
 impl PostProcessor for UnknownReleaseDate {
     fn process(&self, songs: Vec<ArtistSong>) -> Vec<ArtistSong> {
@@ -51,7 +51,7 @@ impl PostProcessor for UnknownReleaseDate {
     }
 }
 
-pub struct TitleSanitizer;
+struct TitleSanitizer;
 
 impl PostProcessor for TitleSanitizer {
     fn process(&self, songs: Vec<ArtistSong>) -> Vec<ArtistSong> {
@@ -61,4 +61,20 @@ impl PostProcessor for TitleSanitizer {
             .filter(|song| !re.is_match(&song.title.to_lowercase()))
             .collect()
     }
+}
+
+pub fn process_artist_songs(artist_id: u32, mut artist_songs: Vec<ArtistSong>) -> Vec<ArtistSong> {
+    let post_processors: Vec<Box<dyn PostProcessor>> = vec![
+        Box::new(UnknownLanguage),
+        Box::new(IncompleteLyrics),
+        Box::new(UnknownReleaseDate),
+        Box::new(MainArtist { artist_id }),
+        Box::new(TitleSanitizer),
+    ];
+
+    for post_processor in post_processors {
+        artist_songs = post_processor.process(artist_songs);
+    }
+
+    artist_songs
 }
