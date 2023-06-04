@@ -5,7 +5,7 @@ use {
         responses::{ArtistResponse, ArtistSongsResponse, SearchResponse, SongResponse},
         song::ArtistSong,
     },
-    reqwest::Client,
+    reqwest::{Client, Error},
     serde::Deserialize,
 };
 
@@ -32,65 +32,93 @@ impl Genius<'_> {
         }
     }
 
-    /// Reference: https://docs.genius.com/#/search-h2
-    pub async fn search(&self, q: &str) -> Result<Vec<Hit>, reqwest::Error> {
-        let url: String = format!("{}/search", self.base_url);
-
+    /// https://docs.genius.com/#/search-h2
+    pub async fn search(&self, q: &str) -> Result<Vec<Hit>, Error> {
         let request = self
             .reqwest
-            .get(url)
+            .get(format!("{}/search", self.base_url))
             .query(&[("q", q)])
             .bearer_auth(&self.auth_token)
             .send()
-            .await?;
+            .await;
 
-        match request.status() {
-            reqwest::StatusCode::OK => match request.json::<Response<SearchResponse>>().await {
-                Ok(res) => Ok(res.response.hits.unwrap()),
-                Err(e) => panic!("Unexpected result:\n{:#?}", e),
+        match request {
+            Ok(res) => match res.error_for_status() {
+                Ok(res_ok) => match res_ok.json::<Response<SearchResponse>>().await {
+                    Ok(search_res) => Ok(search_res.response.hits.unwrap()),
+                    Err(err) => {
+                        println!("Error while deserializing to SearchResponse: {:#?}", err);
+                        Err(err)
+                    }
+                },
+                Err(res_err) => {
+                    println!("Bad status code: {:?}", res_err.status());
+                    Err(res_err)
+                }
             },
-            bad_status_code => panic!("Bad status code: {}", bad_status_code),
+            Err(err) => {
+                println!("Unexpected result: {}", err);
+                Err(err)
+            }
         }
     }
 
-    /// Reference:  https://docs.genius.com/#songs-h2
-    pub async fn songs(&self, id: u32) -> Result<ArtistSong, reqwest::Error> {
+    /// https://docs.genius.com/#songs-h2
+    pub async fn songs(&self, id: u32) -> Result<ArtistSong, Error> {
         let response = self
             .reqwest
             .get(format!("https://api.genius.com/songs/{}", id))
             .bearer_auth(&self.auth_token)
             .send()
-            .await?;
+            .await;
 
-        match response.status() {
-            reqwest::StatusCode::OK => match response.json::<Response<SongResponse>>().await {
-                Ok(res) => Ok(res.response.song.unwrap()),
-                Err(e) => panic!("Unexpected result:\n{:#?}", e),
+        match response {
+            Ok(res) => match res.error_for_status() {
+                Ok(res_ok) => match res_ok.json::<Response<SongResponse>>().await {
+                    Ok(song_res) => Ok(song_res.response.song.unwrap()),
+                    Err(err) => {
+                        println!("Error while deserializing to SongResponse: {:#?}", err);
+                        Err(err)
+                    }
+                },
+                Err(err) => {
+                    println!("Bad status code: {:?}", err.status());
+                    Err(err)
+                }
             },
-            bad_status_code => panic!("Bad status code: {}", bad_status_code),
+            Err(e) => panic!("Unexpected result:\n{:#?}", e),
         }
     }
 
     /// https://docs.genius.com/#artists-h2
-    pub async fn artists(&self, id: u32) -> Result<Artist, reqwest::Error> {
+    pub async fn artists(&self, id: u32) -> Result<Artist, Error> {
         let response = self
             .reqwest
             .get(format!("https://api.genius.com/artists/{}", id))
             .bearer_auth(&self.auth_token)
             .send()
-            .await?;
+            .await;
 
-        match response.status() {
-            reqwest::StatusCode::OK => match response.json::<Response<ArtistResponse>>().await {
-                Ok(res) => Ok(res.response.artist.unwrap()),
-                Err(e) => panic!("Unexpected result:\n{:#?}", e),
+        match response {
+            Ok(res) => match res.error_for_status() {
+                Ok(res_ok) => match res_ok.json::<Response<ArtistResponse>>().await {
+                    Ok(artist_res) => Ok(artist_res.response.artist.unwrap()),
+                    Err(err) => {
+                        println!("Error while deserializing to SongResponse: {:#?}", err);
+                        Err(err)
+                    }
+                },
+                Err(err) => {
+                    println!("Bad status code: {:?}", err.status());
+                    Err(err)
+                }
             },
-            bad_status_code => panic!("Bad status code: {}", bad_status_code),
+            Err(e) => panic!("Unexpected result:\n{:#?}", e),
         }
     }
 
     /// https://docs.genius.com/#artists-h2
-    pub async fn artists_songs(&self, artist_id: u32) -> Result<Vec<ArtistSong>, reqwest::Error> {
+    pub async fn artists_songs(&self, artist_id: u32) -> Result<Vec<ArtistSong>, Error> {
         let mut page: u16 = 1;
         let mut total_count: usize = 0;
         let mut resulting_vector: Vec<ArtistSong> = vec![];
