@@ -7,6 +7,7 @@ use std::{
 
 use genius::model::song::{ArtistSong, ArtistSongWithLyrics};
 use serde::{Deserialize, Serialize};
+use serde_json::Value;
 
 #[derive(Deserialize, Debug, Clone)]
 pub struct FileData {
@@ -38,7 +39,7 @@ pub struct FileDataWithLyrics {
 
 pub trait FileManager<T> {
     fn read(path: &str) -> T;
-    fn write(path: &str, content: String);
+    fn write(path: &str, content: Value);
 }
 
 pub struct SongsFileManager;
@@ -50,8 +51,8 @@ impl FileManager<FileData> for SongsFileManager {
         serde_json::from_reader(reader).unwrap()
     }
 
-    fn write(path: &str, content: String) {
+    fn write(path: &str, content: Value) {
         let mut file = File::create(path).unwrap();
-        file.write_all(content.as_bytes()).unwrap();
+        file.write_all(content.to_string().as_bytes()).unwrap();
     }
 }
