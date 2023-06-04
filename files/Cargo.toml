@@ -1,0 +1,11 @@
+[package]
+name = "files"
+version = "0.1.0"
+edition = "2021"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+genius = { path = "../genius" }
+serde = { version = "1.0.136", features = ["derive"] }
+serde_json = "1.0.79"

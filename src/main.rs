@@ -1,8 +1,7 @@
 mod args;
-mod file_manager;
 mod post_processor;
 
-use file_manager::{FileManager, SongsFileManager};
+use files::file_manager::{FileManager, SongsFileManager};
 use genius::{
     genius::Genius,
     model::{artist::PrimaryArtist, hit::Hit, song::ArtistSong},

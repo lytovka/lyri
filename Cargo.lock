@@ -297,6 +297,15 @@ dependencies = [
 ]
 
 [[package]]
+name = "files"
+version = "0.1.0"
+dependencies = [
+ "genius",
+ "serde",
+ "serde_json",
+]
+
+[[package]]
 name = "fnv"
 version = "1.0.7"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -673,6 +682,7 @@ name = "lyri"
 version = "0.1.0"
 dependencies = [
  "clap",
+ "files",
  "genius",
  "regex",
  "scraper 0.1.0",
