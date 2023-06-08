@@ -23,3 +23,15 @@ pub fn fetch_progress_bar() -> ProgressBar {
     spinner.set_message("Fetching songs...");
     spinner
 }
+
+pub fn scrape_progress_bar(n: u16) -> ProgressBar {
+    let spinner = indicatif::ProgressBar::new(n as u64);
+    spinner.enable_steady_tick(Duration::from_millis(120));
+    spinner.set_style(
+        ProgressStyle::with_template(
+            "{spinner:.blue} [{elapsed_precise}] [{bar:40.cyan/blue}] ({pos}/{len}, ETA {eta})",
+        )
+        .unwrap(),
+    );
+    spinner
+}

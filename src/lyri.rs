@@ -39,6 +39,7 @@ fn find_arg_artist_from_hits(arg_artist: &str, genius_hits: Vec<Hit>) -> (u32, S
 }
 
 async fn scrape_lyrics_in_parallel(songs: Vec<ArtistSong>) -> HashMap<u32, String> {
+    let progress_bar = cli::progress::scrape_progress_bar(songs.len() as u16);
     let (sender, mut receiver) = mpsc::channel::<(u32, String)>(songs.len());
     let sender = Arc::new(Mutex::new(sender));
 
@@ -58,6 +59,7 @@ async fn scrape_lyrics_in_parallel(songs: Vec<ArtistSong>) -> HashMap<u32, Strin
 
     let mut lyrics_map: HashMap<u32, String> = HashMap::new();
     loop {
+        progress_bar.set_position(lyrics_map.len() as u64);
         let message = timeout(IDLE_TIMEOUT, receiver.recv()).await;
 
         match message {
@@ -114,7 +116,7 @@ pub async fn lyri(args: Args) -> Result<(), Box<dyn std::error::Error>> {
         "songs": file_data_with_lyrics
     });
 
-    let file_path = file_path_with_lyrics_from_artist("Pharrell Williams");
+    let file_path = file_path_with_lyrics_from_artist(artist_name.as_str());
     SongsFileManager::write(file_path.as_str(), file_json);
 
     return Ok(());

@@ -142,7 +142,7 @@ impl Genius<'_> {
                         Ok(res) => match res.response.songs {
                             Some(songs) => {
                                 if songs.is_empty() {
-                                    spinner.finish_with_message("Done");
+                                    spinner.finish_and_clear();
                                     break Ok(resulting_vector);
                                 }
                                 total_count += songs.len();
@@ -152,7 +152,7 @@ impl Genius<'_> {
                             None => {
                                 if !resulting_vector.is_empty() {
                                     println!("Returning {} songs", total_count);
-                                    spinner.finish_with_message("Done");
+                                    spinner.finish_and_clear();
                                     break Ok(resulting_vector);
                                 } else {
                                     panic!("No song has been returned");
@@ -165,7 +165,7 @@ impl Genius<'_> {
                 bad_status_code => {
                     if !resulting_vector.is_empty() {
                         println!("Returning {} songs", total_count);
-                        spinner.finish_with_message("Done");
+                        spinner.finish_and_clear();
                         break Ok(resulting_vector);
                     } else {
                         panic!("Bad status code {:?}", bad_status_code);
