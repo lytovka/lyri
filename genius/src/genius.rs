@@ -122,6 +122,7 @@ impl Genius<'_> {
         let mut page: u16 = 1;
         let mut total_count: usize = 0;
         let mut resulting_vector: Vec<ArtistSong> = vec![];
+        let spinner = cli::progress::fetch_progress_bar();
 
         loop {
             let response = self
@@ -135,14 +136,13 @@ impl Genius<'_> {
                 .send()
                 .await?;
 
-            println!("Parsing page: {}\n", page);
-
             match response.status() {
                 reqwest::StatusCode::OK => {
                     match response.json::<Response<ArtistSongsResponse>>().await {
                         Ok(res) => match res.response.songs {
                             Some(songs) => {
                                 if songs.is_empty() {
+                                    spinner.finish_with_message("Done");
                                     break Ok(resulting_vector);
                                 }
                                 total_count += songs.len();
@@ -152,6 +152,7 @@ impl Genius<'_> {
                             None => {
                                 if !resulting_vector.is_empty() {
                                     println!("Returning {} songs", total_count);
+                                    spinner.finish_with_message("Done");
                                     break Ok(resulting_vector);
                                 } else {
                                     panic!("No song has been returned");
@@ -164,6 +165,7 @@ impl Genius<'_> {
                 bad_status_code => {
                     if !resulting_vector.is_empty() {
                         println!("Returning {} songs", total_count);
+                        spinner.finish_with_message("Done");
                         break Ok(resulting_vector);
                     } else {
                         panic!("Bad status code {:?}", bad_status_code);

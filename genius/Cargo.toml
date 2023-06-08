@@ -12,3 +12,4 @@ scraper = "0.16.0"
 serde = { version = "1.0.136", features = ["derive"] }
 serde_json = "1.0.79"
 tokio = { version = "1.28.1", features = ["full"] }
+cli = { path = "../cli" }
