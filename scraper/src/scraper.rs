@@ -19,14 +19,14 @@ impl AppScraper {
     }
 
     pub async fn from_url(&self, url: &str) -> Result<String, Error> {
-        let request = self.client.get(url).send().await?;
+        let response = self.client.get(url).send().await?.error_for_status();
 
-        match request.status() {
-            reqwest::StatusCode::OK => {
-                let lyrics = self.scrape_lyrics(&request.text().await?);
+        match response {
+            Ok(res) => {
+                let lyrics = self.scrape_lyrics(&res.text().await?);
                 Ok(lyrics)
             }
-            bad_status_code => panic!("Bad status code: {}", bad_status_code),
+            Err(err) => Err(err),
         }
     }
 
