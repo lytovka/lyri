@@ -5,6 +5,7 @@ use genius::{
     genius::Genius,
     model::{artist::PrimaryArtist, hit::Hit, song::ArtistSong},
 };
+use log::{error, warn};
 use processing::filters;
 use scraper::scraper::AppScraper;
 use tokio::{
@@ -52,7 +53,7 @@ async fn scrape_lyrics_in_parallel(songs: Vec<ArtistSong>) -> HashMap<u32, Strin
                     Ok(res) => res,
                     Err(err) => panic!("{}", err.to_string()),
                 },
-                Err(err) => println!("Error: {}", err),
+                Err(err) => error!("Error while sending value to receiver: {}", err),
             }
         });
     }
@@ -74,7 +75,7 @@ async fn scrape_lyrics_in_parallel(songs: Vec<ArtistSong>) -> HashMap<u32, Strin
             },
             Err(_) => {
                 // Timeout occurred, no message received within the idle timeout
-                println!("Idle timeout reached");
+                warn!("Idle timeout reached");
                 break;
             }
         }
