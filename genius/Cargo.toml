@@ -10,6 +10,8 @@ reqwest = { version = "0.11.10", features = ["json"] }
 dotenv = "0.15.0"
 scraper = "0.16.0"
 serde = { version = "1.0.136", features = ["derive"] }
+log = "0.4.18"
+env_logger = "0.10.0"
 serde_json = "1.0.79"
 tokio = { version = "1.28.1", features = ["full"] }
 cli = { path = "../cli" }
