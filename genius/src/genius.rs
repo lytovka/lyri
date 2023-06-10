@@ -127,8 +127,8 @@ impl Genius {
     {
         match res.error_for_status() {
             Ok(res_ok) => {
-                let item_res = res_ok.json::<MyResponse<T>>().await?;
-                match item_res.response.get_items() {
+                let items_res = res_ok.json::<MyResponse<T>>().await?;
+                match items_res.response.get_items() {
                     Some(items) => Ok(items),
                     None => panic!("No items have been returned"),
                 }
