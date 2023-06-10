@@ -109,7 +109,10 @@ impl Genius {
         match res.error_for_status() {
             Ok(res_ok) => {
                 let item_res = res_ok.json::<MyResponse<T>>().await?;
-                self.handle_single_item_response(item_res.response)
+                match item_res.response.get_item() {
+                    Some(item) => Ok(item),
+                    None => panic!("No item has been returned"),
+                }
             }
             Err(res_err) => {
                 error!("Bad status code: {:?}", res_err.status());
@@ -125,7 +128,10 @@ impl Genius {
         match res.error_for_status() {
             Ok(res_ok) => {
                 let item_res = res_ok.json::<MyResponse<T>>().await?;
-                self.handle_multiple_items_response(item_res.response)
+                match item_res.response.get_items() {
+                    Some(items) => Ok(items),
+                    None => panic!("No items have been returned"),
+                }
             }
             Err(res_err) => {
                 error!("Bad status code: {:?}", res_err.status());
@@ -133,26 +139,7 @@ impl Genius {
             }
         }
     }
-
-    fn handle_multiple_items_response<T>(&self, response: T) -> Result<Vec<T::Item>, Error>
-    where
-        T: ResponseMultipleItems,
-    {
-        match response.get_items() {
-            Some(items) => Ok(items),
-            None => panic!("No items have been returned"),
-        }
-    }
-
-    fn handle_single_item_response<T>(&self, response: T) -> Result<T::Item, Error>
-    where
-        T: ResponseSingleItem,
-    {
-        match response.get_item() {
-            Some(item) => Ok(item),
-            None => panic!("No item has been returned"),
-        }
-    }
+    
 }
 
 
