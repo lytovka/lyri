@@ -1,4 +1,4 @@
-use log::{error, info};
+use log::{error};
 use reqwest::Response;
 use serde::de::DeserializeOwned;
 
@@ -77,8 +77,7 @@ impl Genius {
     /// https://docs.genius.com/#artists-h2
     pub async fn artists_songs(&self, artist_id: u32) -> Result<Vec<ArtistSong>, Error> {
         let mut page: u16 = 1;
-        let mut total_count: usize = 0;
-        let mut songs_res: Vec<ArtistSong> = vec![];
+        let mut all_songs: Vec<ArtistSong> = vec![];
         let spinner = cli::progress::fetch_progress_bar();
 
         loop {
@@ -90,38 +89,15 @@ impl Genius {
                 .send()
                 .await?;
 
-            match response.error_for_status() {
-                Ok(res_ok) => match res_ok.json::<MyResponse<ArtistSongsResponse>>().await {
-                    Ok(res_parsed) => match res_parsed.response.songs {
-                        Some(songs) => {
-                            if songs.is_empty() {
-                                spinner.finish_and_clear();
-                                break Ok(songs_res);
-                            }
-                            total_count += songs.len();
-                            songs_res.extend(songs);
-                            page += 1;
-                        }
-                        None => {
-                            if !songs_res.is_empty() {
-                                spinner.finish_and_clear();
-                                break Ok(songs_res);
-                            } else {
-                                error!("No songs have been returned");
-                            }
-                        }
-                    },
-                    Err(e) => error!("Error while deserializing to ArtistSongsResponse: {:#?}", e),
-                },
-                Err(res_bad) => {
-                    if !songs_res.is_empty() {
-                        info!("Returning {} songs", total_count);
-                        spinner.finish_and_clear();
-                        break Ok(songs_res);
-                    } else {
-                        error!("Bad status code {:?}", res_bad.status());
-                    }
-                }
+            let current_page_songs = self.handle_vector_response::<ArtistSongsResponse>(response).await?;
+            
+            if current_page_songs.is_empty() {
+                spinner.finish_and_clear();
+                break Ok(all_songs);
+            }
+            else {
+                all_songs.extend(current_page_songs);
+                page += 1;
             }
         }
     }
@@ -189,6 +165,13 @@ impl ResponseMultipleItems for SearchResponse {
     type Item = Hit;
     fn get_items(self) -> Option<Vec<Self::Item>> {
         self.hits
+    }
+}
+
+impl ResponseMultipleItems for ArtistSongsResponse {
+    type Item = ArtistSong;
+    fn get_items(self) -> Option<Vec<Self::Item>> {
+        self.songs
     }
 }
 
