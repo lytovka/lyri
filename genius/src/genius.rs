@@ -1,6 +1,7 @@
 use log::{error};
-use reqwest::Response;
 use serde::de::DeserializeOwned;
+
+use crate::{constants::{GENIUS_ACCESS_TOKEN_ENV_VAR, BASE_URL, PER_PAGE_PARAM}, model::responses::WrappedResponse};
 
 use {
     crate::model::{
@@ -10,17 +11,7 @@ use {
         song::ArtistSong,
     },
     reqwest::{Client, Error},
-    serde::Deserialize,
 };
-
-const PER_PAGE_PARAM: u16 = 50;
-const BASE_URL: &str = "https://api.genius.com";
-const GENIUS_ACCESS_TOKEN_ENV_VAR: &str = "GENIUS_ACCESS_TOKEN";
-
-#[derive(Deserialize, Debug)]
-struct MyResponse<T> {
-    response: T,
-}
 
 pub struct Genius {
     reqwest: Client,
@@ -30,10 +21,10 @@ pub struct Genius {
 impl Genius {
     pub fn new() -> Self {
         Self {
+            reqwest: Client::new(),
             auth_token: dotenv::var(GENIUS_ACCESS_TOKEN_ENV_VAR).unwrap_or_else(|_| 
                 panic!( "Could not find environment variable `{}`. Make sure it is declared in the `.env` file.", GENIUS_ACCESS_TOKEN_ENV_VAR),
             ),
-            reqwest: Client::new(),
         }
     }
 
@@ -102,13 +93,13 @@ impl Genius {
         }
     }
 
-    async fn handle_response<T>(&self, res: Response) -> Result<T::Item, Error>
+    async fn handle_response<T>(&self, res: reqwest::Response) -> Result<T::Item, Error>
     where
         T: DeserializeOwned + ResponseSingleItem,
     {
         match res.error_for_status() {
             Ok(res_ok) => {
-                let item_res = res_ok.json::<MyResponse<T>>().await?;
+                let item_res = res_ok.json::<WrappedResponse<T>>().await?;
                 match item_res.response.get_item() {
                     Some(item) => Ok(item),
                     None => panic!("No item has been returned"),
@@ -121,13 +112,13 @@ impl Genius {
         }
     }
 
-    async fn handle_vector_response<T>(&self, res: Response) -> Result<Vec<T::Item>, Error>
+    async fn handle_vector_response<T>(&self, res: reqwest::Response) -> Result<Vec<T::Item>, Error>
     where
         T: DeserializeOwned + ResponseMultipleItems,
     {
         match res.error_for_status() {
             Ok(res_ok) => {
-                let items_res = res_ok.json::<MyResponse<T>>().await?;
+                let items_res = res_ok.json::<WrappedResponse<T>>().await?;
                 match items_res.response.get_items() {
                     Some(items) => Ok(items),
                     None => panic!("No items have been returned"),

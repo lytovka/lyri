@@ -3,6 +3,11 @@ use serde::{Deserialize, Serialize};
 use super::{artist::Artist, hit::Hit, song::ArtistSong};
 
 #[derive(Deserialize, Debug)]
+pub struct WrappedResponse<T> {
+    pub response: T,
+}
+
+#[derive(Deserialize, Debug)]
 pub struct SearchResponse {
     pub hits: Option<Vec<Hit>>,
 }
