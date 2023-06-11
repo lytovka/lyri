@@ -1,19 +1,16 @@
-use std::{collections::HashMap, sync::Arc, time::Duration};
+use std::{collections::HashMap, sync::Arc};
 
 use files::file_manager::{FileManager, SongsFileManager};
 use genius::{
     genius::Genius,
     model::{artist::PrimaryArtist, hit::Hit, song::ArtistSong},
 };
-use log::{error, warn};
+use log::error;
 use processing::filters;
 use scraper::scraper::AppScraper;
-use tokio::{
-    sync::{mpsc, Mutex},
-    time::timeout,
-};
+use tokio::sync::Semaphore;
 
-const IDLE_TIMEOUT: Duration = Duration::from_secs(2);
+const MAX_PERMITS: usize = 50;
 
 fn file_path_from_artist(artist: &str) -> String {
     format!("data/{}.json", artist.to_lowercase().replace(" ", "_"))
@@ -40,45 +37,35 @@ fn find_arg_artist_from_hits(arg_artist: &str, genius_hits: Vec<Hit>) -> (u32, S
 }
 
 async fn scrape_lyrics_in_parallel(songs: Vec<ArtistSong>) -> HashMap<u32, String> {
-    let progress_bar = cli::progress::scrape_progress_bar(songs.len() as u16);
-    let (sender, mut receiver) = mpsc::channel::<(u32, String)>(songs.len());
-    let sender = Arc::new(Mutex::new(sender));
+    let progress_bar = Arc::new(cli::progress::scrape_progress_bar(songs.len() as u16));
+    let semaphore = Arc::new(Semaphore::new(std::cmp::min(songs.len(), MAX_PERMITS)));
 
+    let mut join_handles = Vec::new();
     for song in songs.clone() {
-        let sender = Arc::clone(&sender);
-        tokio::spawn(async move {
-            let scraper = AppScraper::new();
-            match scraper.from_url(&song.url).await {
-                Ok(lyrics) => match sender.lock().await.send((song.id, lyrics)).await {
-                    Ok(res) => res,
-                    Err(err) => panic!("{}", err.to_string()),
-                },
-                Err(err) => error!("Error while sending value to receiver: {}", err),
+        let pbc = Arc::clone(&progress_bar);
+        let semaphore = Arc::clone(&semaphore);
+        let _permit = semaphore.acquire_owned().await.unwrap();
+
+        join_handles.push(tokio::spawn(async move {
+            match AppScraper::new().from_url(&song.url).await {
+                Ok(lyrics) => {
+                    drop(_permit);
+                    pbc.inc(1);
+                    (song.id, lyrics)
+                }
+                Err(err) => {
+                    error!("Error scraping lyrics for song `{}`: {}", song.id, err);
+                    (song.id, String::new())
+                }
             }
-        });
+        }));
     }
 
     let mut lyrics_map: HashMap<u32, String> = HashMap::new();
-    loop {
-        progress_bar.set_position(lyrics_map.len() as u64);
-        let message = timeout(IDLE_TIMEOUT, receiver.recv()).await;
 
-        match message {
-            Ok(res) => match res {
-                Some((song_id, lyrics)) => {
-                    lyrics_map.insert(song_id, lyrics);
-                    if lyrics_map.len() == songs.len() {
-                        break;
-                    }
-                }
-                None => break,
-            },
-            Err(_) => {
-                // Timeout occurred, no message received within the idle timeout
-                warn!("Idle timeout reached");
-                break;
-            }
-        }
+    for join_handle in join_handles {
+        let (song_id, lyrics) = join_handle.await.unwrap();
+        lyrics_map.insert(song_id, lyrics);
     }
 
     lyrics_map
@@ -91,9 +78,6 @@ pub async fn lyri(args: Args) -> Result<(), Box<dyn std::error::Error>> {
 
     let hits = genius.search(&args.artist).await?;
     let (artist_id, artist_name) = find_arg_artist_from_hits(&args.artist, hits);
-    /* i don't remember why this was needed...
-    let artist = genius.artists(artist_id).await?;
-    */
     let songs_response = genius.artists_songs(artist_id).await?;
     let filtered_songs = filters::artist_songs(artist_id, songs_response);
 
