@@ -51,11 +51,13 @@ impl PostProcessor for UnknownReleaseDate {
     }
 }
 
-struct TitleSanitizer;
+struct TitleSanitizer {
+    pattern: String,
+}
 
 impl PostProcessor for TitleSanitizer {
     fn process(&self, songs: Vec<ArtistSong>) -> Vec<ArtistSong> {
-        let re = Regex::new(r"(?i)unreleased|remix|(instrumental)").unwrap();
+        let re = Regex::new(&format!(r"(?i){}", self.pattern)).unwrap();
         songs
             .into_iter()
             .filter(|song| !re.is_match(&song.title.to_lowercase()))
@@ -63,20 +65,36 @@ impl PostProcessor for TitleSanitizer {
     }
 }
 
-pub fn artist_songs(artist_id: u32, mut artist_songs: Vec<ArtistSong>) -> Vec<ArtistSong> {
-    let filters: Vec<Box<dyn PostProcessor>> = vec![
+pub struct FilterOptions {
+    pub include_features: Option<bool>,
+    pub antipattern: Option<String>,
+}
+
+pub fn apply(artist_id: u32, artist_songs: Vec<ArtistSong>, options: FilterOptions) -> Vec<ArtistSong> {
+    let mut filters: Vec<Box<dyn PostProcessor>> = vec![
         Box::new(UnknownLanguage),
         Box::new(IncompleteLyrics),
         Box::new(UnknownReleaseDate),
         Box::new(MainArtist { artist_id }),
-        Box::new(TitleSanitizer),
     ];
 
-    artist_songs = filters
+    if let Some(feat) = options.include_features {
+        if feat {
+            filters.pop();
+        }
+    }
+    if let Some(antipattern) = options.antipattern {
+        let p = if !antipattern.is_empty() {
+            antipattern
+        } else {
+            String::from("unreleased|remix|(instrumental)")
+        };
+        filters.push(Box::new(TitleSanitizer { pattern: p }));
+    }
+
+    filters
         .into_iter()
         .fold(artist_songs, |songs, post_processor| {
             post_processor.process(songs)
-        });
-
-    artist_songs
+        })
 }

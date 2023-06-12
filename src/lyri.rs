@@ -1,12 +1,13 @@
 use std::{collections::HashMap, sync::Arc};
 
+use cli::cli::{Cli, Commands};
 use files::file_manager::{FileManager, SongsFileManager};
 use genius::{
     genius::Genius,
     model::{artist::PrimaryArtist, hit::Hit, song::ArtistSong},
 };
 use log::error;
-use processing::filters;
+use processing::filters::{self, FilterOptions};
 use scraper::scraper::AppScraper;
 use tokio::sync::Semaphore;
 
@@ -71,38 +72,49 @@ async fn scrape_lyrics_in_parallel(songs: Vec<ArtistSong>) -> HashMap<u32, Strin
     lyrics_map
 }
 
-use {crate::args::Args, serde_json::json};
+use serde_json::json;
 
-pub async fn lyri(args: Args) -> Result<(), Box<dyn std::error::Error>> {
+pub async fn lyri(cli: Cli) -> Result<(), Box<dyn std::error::Error>> {
     let genius = Genius::new();
 
-    let hits = genius.search(&args.artist).await?;
-    let (artist_id, artist_name) = find_arg_artist_from_hits(&args.artist, hits);
-    let songs_response = genius.artists_songs(artist_id).await?;
-    let filtered_songs = filters::artist_songs(artist_id, songs_response);
+    match cli.commands {
+        Commands::Artist(args) => {
+            let hits = genius.search(&args.name).await?;
+            let (artist_id, artist_name) = find_arg_artist_from_hits(&args.name, hits);
+            let songs_response = genius.artists_songs(artist_id).await?;
+            let mut filtered_songs = filters::apply(
+                artist_id,
+                songs_response,
+                FilterOptions {
+                    include_features: args.features,
+                    antipattern: args.antipattern,
+                },
+            );
+            if let Some(l) = args.limit {
+                if l < filtered_songs.len() as u32 {
+                    filtered_songs.truncate(l as usize);
+                }
+            }
+            let file_json = json!({
+                "total": filtered_songs.len(),
+                "songs": filtered_songs
+            });
+            let file_path = file_path_from_artist(artist_name.as_str());
+            SongsFileManager::write(file_path.as_str(), file_json);
+            let res_file =
+                SongsFileManager::read(file_path_from_artist(artist_name.as_str()).as_str());
 
-    let file_json = json!({
-        "total": filtered_songs.len(),
-        "songs": filtered_songs
-    });
+            let lyrics_map = scrape_lyrics_in_parallel(res_file.songs.clone()).await;
 
-    let file_path = file_path_from_artist(artist_name.as_str());
-
-    SongsFileManager::write(file_path.as_str(), file_json);
-
-    let res_file = SongsFileManager::read(file_path_from_artist(artist_name.as_str()).as_str());
-
-    let lyrics_map = scrape_lyrics_in_parallel(res_file.songs.clone()).await;
-
-    let file_data_with_lyrics = res_file.to_file_data_with_lyrics(lyrics_map);
-
-    let file_json = json!({
-        "total": file_data_with_lyrics.songs.len(),
-        "songs": file_data_with_lyrics
-    });
-
-    let file_path = file_path_with_lyrics_from_artist(artist_name.as_str());
-    SongsFileManager::write(file_path.as_str(), file_json);
+            let file_data_with_lyrics = res_file.to_file_data_with_lyrics(lyrics_map);
+            let file_json = json!({
+                "total": file_data_with_lyrics.songs.len(),
+                "songs": file_data_with_lyrics
+            });
+            let file_path = file_path_with_lyrics_from_artist(artist_name.as_str());
+            SongsFileManager::write(file_path.as_str(), file_json);
+        }
+    }
 
     return Ok(());
 }
