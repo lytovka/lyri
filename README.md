@@ -18,8 +18,7 @@ This project utilizes the [`dotenv`](https://crates.io/crates/dotenv) crate to l
 3. Build and run the application
 
 ```bash
-cargo build
-cargo run -- --artist "oasis" # or any other artist
+cargo run -- artist "oasis" # or any other artist
 ```
 
 ### Manual
