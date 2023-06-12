@@ -30,4 +30,8 @@ pub struct ArtistArgs {
     /// Include features in the results. If not specified, features will be excluded
     #[arg(short, long)]
     pub features: Option<bool>,
+
+    /// Sort songs. If not specified, will be sorted by alphabetical order ("title"). Supported values: "popularity" or "title"
+    #[arg(short, long)]
+    pub sort: Option<String>,
 }

@@ -1,7 +1,7 @@
 use log::{error};
-use serde::de::DeserializeOwned;
+use serde::{de::DeserializeOwned};
 
-use crate::{constants::{GENIUS_ACCESS_TOKEN_ENV_VAR, BASE_URL, PER_PAGE_PARAM}, model::responses::WrappedResponse};
+use crate::{constants::{GENIUS_ACCESS_TOKEN_ENV_VAR, BASE_URL, PER_PAGE_PARAM, PAGE_INDEX_PARAM, PER_PAGE_PARAM_LIMIT, SORT_PARAM_POPULARITY, SORT_PARAM, SORT_PARAM_TITLE}, model::responses::WrappedResponse};
 
 use {
     crate::model::{
@@ -66,16 +66,27 @@ impl Genius {
     }
 
     /// https://docs.genius.com/#artists-h2
-    pub async fn artists_songs(&self, artist_id: u32) -> Result<Vec<ArtistSong>, Error> {
+    pub async fn artists_songs(&self, artist_id: u32, options: ArtistSongsOptions) -> Result<Vec<ArtistSong>, Error> {
+        let spinner = cli::progress::fetch_progress_bar();
         let mut page: u16 = 1;
         let mut all_songs: Vec<ArtistSong> = vec![];
-        let spinner = cli::progress::fetch_progress_bar();
+        let mut query_params = vec![
+            (PAGE_INDEX_PARAM, page.to_string()), 
+            (PER_PAGE_PARAM, String::from(PER_PAGE_PARAM_LIMIT))];
+            
+        if let Some(sort) = options.sort {
+            match sort {
+                SongsSort::Popularity => query_params.push((SORT_PARAM, String::from(SORT_PARAM_POPULARITY))),
+                SongsSort::Title => query_params.push((SORT_PARAM, String::from(SORT_PARAM_TITLE)))
+            }
+        }
 
         loop {
+            query_params[0].1 = page.to_string();
             let response = self
                 .reqwest
                 .get(format!("{}/artists/{}/songs", BASE_URL, artist_id))
-                .query(&[("page", page), ("per_page", PER_PAGE_PARAM)])
+                .query(&query_params)
                 .bearer_auth(&self.auth_token)
                 .send()
                 .await?;
@@ -131,6 +142,15 @@ impl Genius {
         }
     }
     
+}
+
+pub struct ArtistSongsOptions {
+    pub sort: Option<SongsSort>    
+}
+
+pub enum SongsSort {
+    Popularity,
+    Title
 }
 
 
