@@ -31,7 +31,7 @@ pub struct ArtistArgs {
     #[arg(short, long)]
     pub features: Option<bool>,
 
-    /// Sort returned songs. If not specified, songs will be sorted by alphabetical order ("title"). Acceptable values: "popularity" or "title"
+    /// Sort songs. If not specified, will be sorted by alphabetical order ("title"). Supported values: "popularity" or "title"
     #[arg(short, long)]
     pub sort: Option<String>,
 }
