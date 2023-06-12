@@ -1,14 +1,14 @@
-use std::{collections::HashMap, sync::Arc};
-
-use cli::cli::{Cli, Commands};
+use cli::cli::{ArtistArgs, Cli, Commands};
 use files::file_manager::{FileManager, SongsFileManager};
 use genius::{
-    genius::Genius,
+    genius::{ArtistSongsOptions, Genius, SongsSort},
     model::{artist::PrimaryArtist, hit::Hit, song::ArtistSong},
 };
 use log::error;
 use processing::filters::{self, FilterOptions};
 use scraper::scraper::AppScraper;
+use serde_json::json;
+use std::{collections::HashMap, sync::Arc};
 use tokio::sync::Semaphore;
 
 const MAX_PERMITS: usize = 50;
@@ -72,25 +72,46 @@ async fn scrape_lyrics_in_parallel(songs: Vec<ArtistSong>) -> HashMap<u32, Strin
     lyrics_map
 }
 
-use serde_json::json;
+fn to_songs_sort_type(sort: Option<String>) -> Option<SongsSort> {
+    let sort = sort.unwrap_or(String::new());
+
+    match sort.as_str() {
+        "popularity" => Some(SongsSort::Popularity),
+        "title" => Some(SongsSort::Title),
+        _ => None,
+    }
+}
 
 pub async fn lyri(cli: Cli) -> Result<(), Box<dyn std::error::Error>> {
     let genius = Genius::new();
 
     match cli.commands {
-        Commands::Artist(args) => {
-            let hits = genius.search(&args.name).await?;
-            let (artist_id, artist_name) = find_arg_artist_from_hits(&args.name, hits);
-            let songs_response = genius.artists_songs(artist_id).await?;
+        Commands::Artist(ArtistArgs {
+            name,
+            limit,
+            antipattern,
+            features,
+            sort,
+        }) => {
+            let hits = genius.search(&name).await?;
+            let (artist_id, artist_name) = find_arg_artist_from_hits(&name, hits);
+            let songs_response = genius
+                .artists_songs(
+                    artist_id,
+                    ArtistSongsOptions {
+                        sort: to_songs_sort_type(sort),
+                    },
+                )
+                .await?;
             let mut filtered_songs = filters::apply(
                 artist_id,
                 songs_response,
                 FilterOptions {
-                    include_features: args.features,
-                    antipattern: args.antipattern,
+                    include_features: features,
+                    antipattern: antipattern,
                 },
             );
-            if let Some(l) = args.limit {
+            if let Some(l) = limit {
                 if l < filtered_songs.len() as u32 {
                     filtered_songs.truncate(l as usize);
                 }
