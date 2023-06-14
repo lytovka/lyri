@@ -2,7 +2,7 @@ use std::{
     collections::HashMap,
     fs::File,
     io::{BufReader, Write},
-    str,
+    str, path::Path,
 };
 
 use genius::model::song::{ArtistSong, ArtistSongWithLyrics};
@@ -38,20 +38,20 @@ pub struct FileDataWithLyrics {
 }
 
 pub trait FileManager<T> {
-    fn read(path: &str) -> T;
-    fn write(path: &str, content: Value);
+    fn read(path: &Path) -> T;
+    fn write(path: &Path, content: Value);
 }
 
 pub struct SongsFileManager;
 
 impl FileManager<FileData> for SongsFileManager {
-    fn read(path: &str) -> FileData {
+    fn read(path: &Path) -> FileData {
         let file = File::open(path).unwrap();
         let reader = BufReader::new(file);
         serde_json::from_reader(reader).unwrap()
     }
 
-    fn write(path: &str, content: Value) {
+    fn write(path: &Path, content: Value) {
         let mut file = File::create(path).unwrap();
         file.write_all(content.to_string().as_bytes()).unwrap();
     }
