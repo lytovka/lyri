@@ -1,7 +1,8 @@
 use std::{
     collections::HashMap,
-    fs::File,
+    fs::{self, File},
     io::{BufReader, Write},
+    path::Path,
     str,
 };
 
@@ -38,21 +39,37 @@ pub struct FileDataWithLyrics {
 }
 
 pub trait FileManager<T> {
-    fn read(path: &str) -> T;
-    fn write(path: &str, content: Value);
+    fn read(path: &Path) -> T;
+    fn write(path: &Path, content: Value);
+    fn try_write(path: &Path, content: Value) -> Result<(), Box<dyn std::error::Error>>;
 }
 
 pub struct SongsFileManager;
 
 impl FileManager<FileData> for SongsFileManager {
-    fn read(path: &str) -> FileData {
+    fn read(path: &Path) -> FileData {
         let file = File::open(path).unwrap();
         let reader = BufReader::new(file);
         serde_json::from_reader(reader).unwrap()
     }
 
-    fn write(path: &str, content: Value) {
+    fn write(path: &Path, content: Value) {
         let mut file = File::create(path).unwrap();
         file.write_all(content.to_string().as_bytes()).unwrap();
+    }
+
+    fn try_write(path: &Path, content: Value) -> Result<(), Box<dyn std::error::Error>> {
+        if let Some(parent) = path.parent() {
+            if parent.exists() {
+                let mut file = File::create(path).unwrap();
+                file.write_all(content.to_string().as_bytes()).unwrap();
+                return Ok(());
+            }
+            fs::create_dir_all(path.parent().unwrap())?;
+        }
+        let mut file = File::create(path).unwrap();
+        file.write_all(content.to_string().as_bytes()).unwrap();
+
+        Ok(())
     }
 }

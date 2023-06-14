@@ -34,4 +34,8 @@ pub struct ArtistArgs {
     /// Sort songs. If not specified, will be sorted by alphabetical order ("title"). Supported values: "popularity" or "title"
     #[arg(short, long)]
     pub sort: Option<String>,
+
+    /// A path to the directory where the lyrics will be saved. If not specified, the lyrics will be saved in a new file in the current directory.
+    #[arg(short, long)]
+    pub output: Option<String>,
 }

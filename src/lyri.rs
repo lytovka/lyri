@@ -4,24 +4,24 @@ use genius::{
     genius::{ArtistSongsOptions, Genius, SongsSort},
     model::{artist::PrimaryArtist, hit::Hit, song::ArtistSong},
 };
-use log::error;
+use log::{error, info};
 use processing::filters::{self, FilterOptions};
 use scraper::scraper::AppScraper;
 use serde_json::json;
-use std::{collections::HashMap, sync::Arc};
+use std::{collections::HashMap, path::PathBuf, sync::Arc};
 use tokio::sync::Semaphore;
 
 const MAX_PERMITS: usize = 50;
 
-fn file_path_from_artist(artist: &str) -> String {
-    format!("data/{}.json", artist.to_lowercase().replace(" ", "_"))
-}
-
-fn file_path_with_lyrics_from_artist(artist: &str) -> String {
-    format!(
-        "data/{}_with_lyrics.json",
-        artist.to_lowercase().replace(" ", "_")
-    )
+fn build_path(artist: &str, dir_path: Option<String>) -> PathBuf {
+    let mut pb = PathBuf::new();
+    if let Some(dir_path) = dir_path {
+        pb.push(dir_path);
+    }
+    pb.push(artist.to_lowercase().replace(" ", "_"));
+    pb.set_extension("json");
+    info!("Path: {:?}", pb);
+    pb
 }
 
 fn find_arg_artist_from_hits(arg_artist: &str, genius_hits: Vec<Hit>) -> (u32, String) {
@@ -92,6 +92,7 @@ pub async fn lyri(cli: Cli) -> Result<(), Box<dyn std::error::Error>> {
             antipattern,
             features,
             sort,
+            output,
         }) => {
             let hits = genius.search(&name).await?;
             let (artist_id, artist_name) = find_arg_artist_from_hits(&name, hits);
@@ -120,20 +121,17 @@ pub async fn lyri(cli: Cli) -> Result<(), Box<dyn std::error::Error>> {
                 "total": filtered_songs.len(),
                 "songs": filtered_songs
             });
-            let file_path = file_path_from_artist(artist_name.as_str());
-            SongsFileManager::write(file_path.as_str(), file_json);
-            let res_file =
-                SongsFileManager::read(file_path_from_artist(artist_name.as_str()).as_str());
 
+            let path_buf = build_path(artist_name.as_str(), output);
+            let _ = SongsFileManager::try_write(path_buf.as_path(), file_json);
+            let res_file = SongsFileManager::read(path_buf.as_path());
             let lyrics_map = scrape_lyrics_in_parallel(res_file.songs.clone()).await;
-
             let file_data_with_lyrics = res_file.to_file_data_with_lyrics(lyrics_map);
             let file_json = json!({
                 "total": file_data_with_lyrics.songs.len(),
                 "songs": file_data_with_lyrics
             });
-            let file_path = file_path_with_lyrics_from_artist(artist_name.as_str());
-            SongsFileManager::write(file_path.as_str(), file_json);
+            SongsFileManager::write(path_buf.as_path(), file_json);
         }
     }
 
