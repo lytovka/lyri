@@ -123,7 +123,7 @@ pub async fn lyri(cli: Cli) -> Result<(), Box<dyn std::error::Error>> {
             });
 
             let path_buf = build_path(artist_name.as_str(), output);
-            SongsFileManager::write(path_buf.as_path(), file_json);
+            let _ = SongsFileManager::try_write(path_buf.as_path(), file_json);
             let res_file = SongsFileManager::read(path_buf.as_path());
             let lyrics_map = scrape_lyrics_in_parallel(res_file.songs.clone()).await;
             let file_data_with_lyrics = res_file.to_file_data_with_lyrics(lyrics_map);

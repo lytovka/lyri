@@ -1,8 +1,9 @@
 use std::{
     collections::HashMap,
-    fs::File,
+    fs::{self, File},
     io::{BufReader, Write},
-    str, path::Path,
+    path::Path,
+    str,
 };
 
 use genius::model::song::{ArtistSong, ArtistSongWithLyrics};
@@ -40,6 +41,7 @@ pub struct FileDataWithLyrics {
 pub trait FileManager<T> {
     fn read(path: &Path) -> T;
     fn write(path: &Path, content: Value);
+    fn try_write(path: &Path, content: Value) -> Result<(), Box<dyn std::error::Error>>;
 }
 
 pub struct SongsFileManager;
@@ -54,5 +56,20 @@ impl FileManager<FileData> for SongsFileManager {
     fn write(path: &Path, content: Value) {
         let mut file = File::create(path).unwrap();
         file.write_all(content.to_string().as_bytes()).unwrap();
+    }
+
+    fn try_write(path: &Path, content: Value) -> Result<(), Box<dyn std::error::Error>> {
+        if let Some(parent) = path.parent() {
+            if parent.exists() {
+                let mut file = File::create(path).unwrap();
+                file.write_all(content.to_string().as_bytes()).unwrap();
+                return Ok(());
+            }
+            fs::create_dir_all(path.parent().unwrap())?;
+        }
+        let mut file = File::create(path).unwrap();
+        file.write_all(content.to_string().as_bytes()).unwrap();
+
+        Ok(())
     }
 }
