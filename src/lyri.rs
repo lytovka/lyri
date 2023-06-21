@@ -92,7 +92,7 @@ pub async fn lyri(cli: Cli) -> Result<(), Box<dyn std::error::Error>> {
             antipattern,
             features,
             sort,
-            output,
+            output_dir,
         }) => {
             let hits = genius.search(&name).await?;
             let (artist_id, artist_name) = find_arg_artist_from_hits(&name, hits);
@@ -122,8 +122,10 @@ pub async fn lyri(cli: Cli) -> Result<(), Box<dyn std::error::Error>> {
                 "songs": filtered_songs
             });
 
-            let path_buf = build_path(artist_name.as_str(), output);
-            let _ = SongsFileManager::try_write(path_buf.as_path(), file_json);
+            let path_buf = build_path(artist_name.as_str(), output_dir);
+            if let Err(err) = SongsFileManager::try_write(path_buf.as_path(), file_json) {
+                error!("Error writing file to {:?}: {}", path_buf, err);
+            }
             let res_file = SongsFileManager::read(path_buf.as_path());
             let lyrics_map = scrape_lyrics_in_parallel(res_file.songs.clone()).await;
             let file_data_with_lyrics = res_file.to_file_data_with_lyrics(lyrics_map);

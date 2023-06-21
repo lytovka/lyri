@@ -37,5 +37,5 @@ pub struct ArtistArgs {
 
     /// A path to the directory where the lyrics will be saved. If not specified, the lyrics will be saved in a new file in the current directory.
     #[arg(short, long)]
-    pub output: Option<String>,
+    pub output_dir: Option<String>,
 }

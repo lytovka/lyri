@@ -153,7 +153,6 @@ pub enum SongsSort {
     Title
 }
 
-
 trait ResponseMultipleItems {
     type Item;
     fn get_items(self) -> Option<Vec<Self::Item>>;
